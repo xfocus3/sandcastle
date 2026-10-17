@@ -20,6 +20,8 @@ Explore the repo and relevant tests before editing.
 
 # EXECUTION
 
+Work in tracer bullets: complete one small end-to-end behavior through the existing Java test seam before starting the next. Apply the red-green-refactor cycle below to each slice; do not batch all tests first and all implementation afterward. Use the configured GitHub Actions checks and inspect their exact-revision feedback before proceeding to the next slice.
+
 Where a test seam already exists, or a new one is being proposed, do red-green-refactor:
 
 1. RED: write a failing test
