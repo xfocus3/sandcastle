@@ -182,6 +182,17 @@ jobs:
 
       # Validates the whole plan first; on any problem it changes nothing and
       # fails, leaving every agent:explore label in place for the next run.
+      - name: Prepare missing workflow labels
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          labels=$(gh label list --limit 1000 --json name)
+          for label in agent:explore agent:implement agent:in-progress agent:blocked agent:review agent:update-branch ready-for-human; do
+            if ! jq -e --arg name "$label" 'any(.[]; .name == $name)' <<< "$labels" > /dev/null; then
+              gh label create "$label" --color ededed
+            fi
+          done
+
       - name: Apply plan
         env:
           AGENT_PAT: ${{ secrets.AGENT_PAT }}
