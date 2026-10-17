@@ -44,13 +44,13 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@9622ea00ca6824433aeea21d2d709ef14776e5e8
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@fdda89d8d0de98650a204c28a5c002da32a1cbab
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9622ea00ca6824433aeea21d2d709ef14776e5e8
+      tool_ref: fdda89d8d0de98650a204c28a5c002da32a1cbab
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -59,13 +59,13 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@9622ea00ca6824433aeea21d2d709ef14776e5e8
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@fdda89d8d0de98650a204c28a5c002da32a1cbab
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9622ea00ca6824433aeea21d2d709ef14776e5e8
+      tool_ref: fdda89d8d0de98650a204c28a5c002da32a1cbab
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
@@ -74,10 +74,10 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@9622ea00ca6824433aeea21d2d709ef14776e5e8
+    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@fdda89d8d0de98650a204c28a5c002da32a1cbab
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9622ea00ca6824433aeea21d2d709ef14776e5e8
+      tool_ref: fdda89d8d0de98650a204c28a5c002da32a1cbab
