@@ -1,13 +1,15 @@
 {
   "version": 1,
   "repository": "xfocus3/sandcastle",
-  "implementationHead": "e571a250e19f8bd4b46e1dcdcf66194d0c66b09d",
+  "implementationHead": "faa912ec56c3bbb5596c280d59ab043283ac26ca",
   "status": "partial-e2e-verification",
   "checks": [
     {
       "name": "transport-and-recovery-unit-suite",
-      "runId": 39035484589,
-      "result": "passed"
+      "runId": 39040151352,
+      "result": "passed",
+      "passed": 1488,
+      "skipped": 2
     },
     {
       "name": "native-implementation-live-handoff",
@@ -49,31 +51,66 @@
     },
     {
       "name": "completed-exchange-replay",
-      "result": "not-run"
+      "result": "passed",
+      "runId": 39036792451,
+      "newRequests": 0
     },
     {
       "name": "review",
-      "result": "not-run"
+      "result": "passed",
+      "runId": 39037652700
     },
     {
       "name": "pr-feedback",
-      "result": "not-run"
+      "result": "passed",
+      "runId": 39038153470,
+      "resultHead": "eb72345cd5f978393df324790e30ccde13b4c535",
+      "javaRunId": 39038271915,
+      "mavenTests": 3,
+      "mavenSkipped": 0
     },
     {
       "name": "update-branch",
-      "result": "not-run"
+      "result": "passed-already-up-to-date",
+      "runId": 39038663721,
+      "coverageGap": "Merge and conflict paths untested"
     },
     {
       "name": "local-loop-paths",
-      "result": "not-run"
+      "result": "blank-docker-template-passed",
+      "runId": 39037054453,
+      "coverageGap": "Other loop templates untested"
     },
     {
       "name": "default-branch-label-triggers",
-      "result": "not-activated"
+      "result": "review-feedback-explore-update-triggered",
+      "temporaryDefaultBranch": "feat/java-agent-workflows",
+      "restoreDefaultBranch": "main"
+    },
+    {
+      "name": "live-issue-explore-retry",
+      "runId": 39040164516,
+      "result": "passed",
+      "commentCount": 1,
+      "commentUrl": "https://github.com/xfocus3/sandcastle/issues/1#issuecomment-6234915975"
+    },
+    {
+      "name": "duplicate-comment-red",
+      "runId": 39039977785,
+      "result": "expected-assertion-failure",
+      "expectedComments": 1,
+      "actualComments": 2
+    },
+    {
+      "name": "explore-initial-partial-apply",
+      "runId": 39039426278,
+      "result": "comment-posted-label-failed",
+      "cause": "Missing ready-for-human label",
+      "reconciled": true
     }
   ],
-  "next": "Obtain approval for the controlled draft test PR, then exercise review/feedback/update stages. Continue recovery replay and local-loop coverage. Do not equate controlled stage tests with live label-trigger verification.",
+  "next": "Await approval for one additional controlled draft PR to verify outer issue implementation publication. Remaining merge/conflict and non-blank local-loop paths still untested. Restore temporary default branch to main and test PR to draft after verification.",
   "testIssue": "https://github.com/xfocus3/sandcastle/issues/1",
-  "testPR": null,
+  "testPR": "https://github.com/xfocus3/sandcastle/pull/2",
   "autoMerge": false
 }
