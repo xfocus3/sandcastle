@@ -11,6 +11,10 @@ on:
       baseline_branch:
         type: string
         default: upstream-main
+    secrets:
+      upstream_sync_token:
+        description: Repository-scoped token with Contents and Workflows write access
+        required: true
     outputs:
       sha:
         value: ${{ jobs.sync.outputs.sha }}
@@ -29,6 +33,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.upstream_sync_token }}
       - name: Fetch latest upstream and advance clean baseline
         id: sync
         env:
