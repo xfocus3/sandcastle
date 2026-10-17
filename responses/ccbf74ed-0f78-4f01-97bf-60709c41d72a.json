@@ -1,0 +1,11 @@
+{
+  "id": "ccbf74ed-0f78-4f01-97bf-60709c41d72a",
+  "requestHash": "7ab1b3376d9c57a190b9c2e9ddc26709ed50a5c8633d74dc41d13a3f5340ed35",
+  "runId": "39035630630",
+  "runAttempt": "1",
+  "head": "2527caffbb08a86e6464a119ccd1b703741c1992",
+  "resultHead": "2527caffbb08a86e6464a119ccd1b703741c1992",
+  "changedPaths": [],
+  "status": "completed",
+  "stdout": "Group: issue #1 alone. Verified Basket.add uses Map.put, so a second addition overwrites the previous quantity; quantityOf reads that overwritten value. BasketTest covers only the first addition. Verdict: easy-call; duplicate_of: null. Two-way door: the localized behavior correction can be reverted without schema or API changes. Scope: test-fixtures/dot-java/maven/src/main/java/example/Basket.java and its BasketTest.java. Add the public-behavior regression add coffee 2 then 3, expect 5; verify the intended assertion failure in Actions, replace put with merge using Integer::sum, then rerun. No new abstractions or separate test seams needed. No duplicate or cross-group pattern in this one-issue batch. No local commands or new tests were run in this read-only triage. <promise>COMPLETE</promise>"
+}
