@@ -1,0 +1,11 @@
+{
+  "id": "97cae71d-4ada-4398-92de-06ff4dcbadc3",
+  "requestHash": "e036616705a4612683ba4ed40e8d6ab106358e71fbed6b089fa7a3247b78343d",
+  "runId": "39037054453",
+  "runAttempt": "1",
+  "head": "493e858600aafbda38400492a817bceab94dedc2",
+  "resultHead": "493e858600aafbda38400492a817bceab94dedc2",
+  "changedPaths": [],
+  "status": "completed",
+  "stdout": "At the requested source revision, repeated additions do not accumulate. Basket.add in test-fixtures/dot-java/maven/src/main/java/example/Basket.java calls quantities.put(item, quantity), replacing the previous value. BasketTest.recordsFirstAddition covers only one addition. Therefore adding coffee with quantities 2 then 3 leaves 3, not 5. This is a source-based read-only assessment; no file changes, local tests, issue/PR actions or merges were performed. <promise>COMPLETE</promise>"
+}
