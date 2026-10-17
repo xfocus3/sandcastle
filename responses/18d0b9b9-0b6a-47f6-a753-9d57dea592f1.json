@@ -1,0 +1,14 @@
+{
+  "id": "18d0b9b9-0b6a-47f6-a753-9d57dea592f1",
+  "requestHash": "a4b733f98ba10cf8703c35d232fdfa7a9d83711d72cadcaa20a2ebc7d1be2d8a",
+  "runId": "39033821951",
+  "runAttempt": "1",
+  "head": "e82b109325eeb6b3af0a3af8d717b6ae53b3a113",
+  "resultHead": "d0a9e5e72ec0b431997d218bba1714c61fb75b98",
+  "changedPaths": [
+    "test-fixtures/dot-java/maven/src/main/java/example/Basket.java",
+    "test-fixtures/dot-java/maven/src/test/java/example/BasketTest.java"
+  ],
+  "status": "completed",
+  "stdout": "Implemented the smallest repeated-addition fix using Map.merge and added the behavioral regression. RED: run 39034201404 at bb65427b023157a2f2c90f85473247d339572347, 2 Maven tests, 1 intended failure: expected 5 but was 3. GREEN: run 39034360595 at d0a9e5e72ec0b431997d218bba1714c61fb75b98, Maven 2 tests passed, zero failures/errors/skips; Gradle fixture check also passed. Tests executed only through GitHub Actions. No additional abstraction or refactoring was necessary. <promise>COMPLETE</promise>"
+}

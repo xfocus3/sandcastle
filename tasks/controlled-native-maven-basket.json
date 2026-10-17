@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "task": "controlled-native-maven-basket",
+  "requestId": "18d0b9b9-0b6a-47f6-a753-9d57dea592f1",
+  "requestPath": "requests/18d0b9b9-0b6a-47f6-a753-9d57dea592f1.json",
+  "responsePath": "responses/18d0b9b9-0b6a-47f6-a753-9d57dea592f1.json",
+  "sourceHead": "e82b109325eeb6b3af0a3af8d717b6ae53b3a113",
+  "resultHead": "d0a9e5e72ec0b431997d218bba1714c61fb75b98",
+  "runId": "39033821951",
+  "runAttempt": "1",
+  "status": "response-ready-awaiting-workflow-resume",
+  "redRun": 39034201404,
+  "greenRun": 39034360595,
+  "contextKind": "synthetic-issue-fallback",
+  "realIssue": "https://github.com/xfocus3/sandcastle/issues/1",
+  "next": "Verify waiting workflow resumes on exact resultHead. This request predates stage-recovery support; do not claim expired-run recovery."
+}
