@@ -1,0 +1,11 @@
+{
+  "id": "cc7e4a1c-f679-4292-abda-2a636f5136db",
+  "requestHash": "44765aec35f4b59093da28e1f85cc235303a8a74707d9b15d39c5cf75e3d6f22",
+  "runId": "39040164516",
+  "runAttempt": "1",
+  "head": "faa912ec56c3bbb5596c280d59ab043283ac26ca",
+  "resultHead": "faa912ec56c3bbb5596c280d59ab043283ac26ca",
+  "changedPaths": [],
+  "status": "completed",
+  "stdout": "<output>{\"issues\":[{\"number\":1,\"tag\":\"needs-a-human\",\"duplicate_of\":null,\"comment\":\"needs-a-human: the fixture bug is clear, but an existing prepared PR already implements it.\\n\\nBasket.add in test-fixtures/dot-java/maven currently replaces quantities with Map.put; BasketTest covers only the first addition. The scoped solution is accumulation with Map.merge and a repeated-addition regression. This is a two-way change confined to the fixture, with no public API or schema change.\\n\\nPR #2 already contains that fix and its regression. Its head eb72345cd5f978393df324790e30ccde13b4c535 passed the Java check: https://github.com/xfocus3/sandcastle/actions/runs/39038271915. Do not start a duplicate implementation. The fixture currently has no input-validation behavior to preserve or extend.\\n\\nOpen decision: retain the controlled PR unmerged until the end-to-end verification is finished. No duplicate issues identified.\"}],\"patterns\":\"\"}</output>"
+}
