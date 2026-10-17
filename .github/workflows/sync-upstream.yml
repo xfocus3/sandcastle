@@ -1,0 +1,58 @@
+name: Sync upstream baseline
+on:
+  workflow_call:
+    inputs:
+      upstream_repository:
+        required: true
+        type: string
+      upstream_branch:
+        type: string
+        default: main
+      baseline_branch:
+        type: string
+        default: upstream-main
+    outputs:
+      sha:
+        value: ${{ jobs.sync.outputs.sha }}
+permissions:
+  contents: write
+concurrency:
+  group: sandcastle-upstream-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      sha: ${{ steps.sync.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch latest upstream and advance clean baseline
+        id: sync
+        env:
+          UPSTREAM: ${{ inputs.upstream_repository }}
+          UPSTREAM_BRANCH: ${{ inputs.upstream_branch }}
+          BASELINE: ${{ inputs.baseline_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$UPSTREAM" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+          git check-ref-format "refs/heads/$UPSTREAM_BRANCH"
+          git check-ref-format "refs/heads/$BASELINE"
+          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = true
+          git fetch --no-tags "https://github.com/$UPSTREAM.git" "refs/heads/$UPSTREAM_BRANCH"
+          head=$(git rev-parse FETCH_HEAD)
+          old=$(git ls-remote origin "refs/heads/$BASELINE" | cut -f1)
+          if [ -n "$old" ]; then
+            git fetch origin "refs/heads/$BASELINE"
+            git merge-base --is-ancestor "$old" "$head" || {
+              echo "Baseline diverged; preserve it and reconcile before starting work."
+              exit 1
+            }
+          fi
+          git push origin "$head:refs/heads/$BASELINE"
+          test "$(git ls-remote origin "refs/heads/$BASELINE" | cut -f1)" = "$head"
+          echo "sha=$head" >> "$GITHUB_OUTPUT"
+          echo "Pinned upstream: $head" >> "$GITHUB_STEP_SUMMARY"
