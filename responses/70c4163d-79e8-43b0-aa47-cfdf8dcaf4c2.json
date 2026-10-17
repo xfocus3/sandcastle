@@ -1,0 +1,11 @@
+{
+  "id": "70c4163d-79e8-43b0-aa47-cfdf8dcaf4c2",
+  "requestHash": "bce2b3d6fca5e5e3b06ebc51edbe279b2ae33cfb03baaadde1dc28619c2ae4a7",
+  "runId": "39039426278",
+  "runAttempt": "1",
+  "head": "583dcda89966eeed370b8aa2e56de9ea0acf2cd7",
+  "resultHead": "583dcda89966eeed370b8aa2e56de9ea0acf2cd7",
+  "changedPaths": [],
+  "status": "completed",
+  "stdout": "Issue #1 is a single two-way fixture change. Basket.add currently uses Map.put, replacing the old quantity; BasketTest only covers the first addition. Minimal fix is Map.merge with Integer::sum and a repeated-addition regression. No validation exists in this fixture, so do not invent validation behavior. Existing open PR #2 already contains the scoped fix and regression, with latest head eb72345cd5f978393df324790e30ccde13b4c535 verified by Actions run 39038271915. Classify needs-a-human to prevent duplicate implementation while that prepared test PR is held unmerged. No duplicate issues or wider pattern identified. No files modified or tests run in this read-only pass. <promise>COMPLETE</promise>"
+}
