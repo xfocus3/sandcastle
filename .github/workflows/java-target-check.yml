@@ -1,0 +1,85 @@
+name: Java target check
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        type: string
+        required: true
+      patch_ref:
+        type: string
+        required: true
+      patch_path:
+        type: string
+        required: true
+      java_version:
+        type: string
+        default: '25'
+      build_tool:
+        type: string
+        default: gradle
+      arguments:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          path: target
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.patch_ref }}
+          path: request
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java_version }}
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Apply prepared patch
+        working-directory: target
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          PATCH_REF: ${{ inputs.patch_ref }}
+          PATCH_PATH: ${{ inputs.patch_path }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PATCH_REF" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PATCH_PATH" =~ ^patches/[A-Za-z0-9._/-]+\.patch$ ]]
+          [[ "$PATCH_PATH" != *..* ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git apply --check "../request/$PATCH_PATH"
+          git apply --index "../request/$PATCH_PATH"
+          printf 'base=%s\npatch_commit=%s\ntree=%s\n' "$TARGET_SHA" "$PATCH_REF" "$(git write-tree)" > ../verification.txt
+      - name: Run Java checks
+        working-directory: target
+        env:
+          BUILD_TOOL: ${{ inputs.build_tool }}
+          ARGUMENTS: ${{ inputs.arguments }}
+        run: |
+          set -euo pipefail
+          readarray -t args < <(python3 -c 'import json,os; a=json.loads(os.environ["ARGUMENTS"]); assert isinstance(a,list) and a and all(isinstance(x,str) and "\n" not in x for x in a); print("\n".join(a))')
+          case "$BUILD_TOOL" in
+            gradle) ./gradlew --no-daemon "${args[@]}" ;;
+            maven) ./mvnw -B "${args[@]}" ;;
+            *) exit 1 ;;
+          esac
+      - name: Save exact-revision verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-verification-${{ github.run_id }}
+          path: |
+            verification.txt
+            target/**/build/test-results/**/TEST-*.xml
+            target/**/target/surefire-reports/TEST-*.xml
+            target/**/target/failsafe-reports/TEST-*.xml
+          retention-days: 7
+          if-no-files-found: error
