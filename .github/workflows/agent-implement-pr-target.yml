@@ -48,21 +48,13 @@ jobs:
           mkdir -p target
           gh api "repos/$GH_REPO/pulls/$PR_NUMBER" > pr.json
           jq -e --arg repo "$GH_REPO" --arg head "$BRANCH_HEAD_SHA" --arg branch "$BRANCH" --arg base "$BASE_REF" '.state == "open" and .head.repo.full_name == $repo and .head.sha == $head and .head.ref == $branch and .base.ref == $base' pr.json > /dev/null
-      - name: Refuse closed PR
-        if: false
-        run: |
-          gh pr edit "$PR_NUMBER" --remove-label "agent:implement" || true
-          gh pr comment "$PR_NUMBER" --body "Refused to run: PR #${PR_NUMBER} is not open."
-
       - name: Transition labels
-        if: true
         run: |
           gh pr edit "$PR_NUMBER" --remove-label "agent:implement" || true
           gh pr edit "$PR_NUMBER" --remove-label "agent:blocked" || true
           gh pr edit "$PR_NUMBER" --add-label "agent:in-progress"
 
       - name: Checkout PR branch
-        if: true
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.head_sha }}
@@ -71,7 +63,6 @@ jobs:
           persist-credentials: false
 
       - name: Prepare branch
-        if: true
         run: |
           set -euo pipefail
           git -c credential.helper= -c credential.helper='!f() { if [ "$1" = get ]; then printf "username=x-access-token\\npassword=%s\\n" "$GH_TOKEN"; fi; }; f' fetch origin "$BASE_REF"
@@ -88,23 +79,19 @@ jobs:
           path: sandcastle-tool
           persist-credentials: false
       - name: Setup Node.js
-        if: true
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install dependencies
-        if: true
         working-directory: sandcastle-tool
         run: npm ci
 
       - name: Build
-        if: true
         working-directory: sandcastle-tool
         run: npm run build
 
       - name: Run implement-PR agent
-        if: true
         env:
           OUTPUT_DIR: ${{ runner.temp }}
         uses: actions/github-script@v7
@@ -118,7 +105,7 @@ jobs:
             });
 
       - name: Push branch
-        if: true && success()
+        if: success()
         run: |
           if [ "$(cat "${RUNNER_TEMP}/has_commits.txt")" != "true" ]; then
             echo "No commits to push."
@@ -139,7 +126,7 @@ jobs:
           fi
 
       - name: Post thread replies
-        if: true && success()
+        if: success()
         env:
           REPLIES: ${{ runner.temp }}/implement_thread_replies.json
         run: |
@@ -159,7 +146,7 @@ jobs:
           done
 
       - name: Post inline comments
-        if: true && success()
+        if: success()
         env:
           COMMENTS: ${{ runner.temp }}/implement_new_inline_comments.json
         run: |
@@ -181,7 +168,7 @@ jobs:
           done
 
       - name: Post top-level comments
-        if: true && success()
+        if: success()
         env:
           COMMENTS: ${{ runner.temp }}/implement_top_level_comments.json
         run: |
@@ -195,7 +182,7 @@ jobs:
           done
 
       - name: Mark blocked on failure
-        if: true && failure()
+        if: failure()
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -209,5 +196,5 @@ jobs:
           gh pr comment "$PR_NUMBER" --body-file "$body_file"
 
       - name: Always remove in-progress
-        if: always() && true
+        if: always()
         run: gh pr edit "$PR_NUMBER" --remove-label "agent:in-progress" || true
