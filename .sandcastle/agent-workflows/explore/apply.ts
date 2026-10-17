@@ -72,11 +72,22 @@ const describe = (effect: GitHubEffect): string => {
 const apply = (effect: GitHubEffect): void => {
   const issue = String(effect.issue);
   switch (effect.kind) {
-    case "comment":
+    case "comment": {
+      const pages = JSON.parse(gh([
+        "api", "--paginate", "--slurp",
+        `repos/${GH_REPO}/issues/${issue}/comments?per_page=100`,
+      ])) as { body: string; user: { login: string } }[][];
+      if (pages.flat().some((comment) =>
+        comment.user.login === "github-actions[bot]" && comment.body === effect.body
+      )) {
+        console.log(`Already posted #${issue}: identical workflow comment`);
+        return;
+      }
       ghWith(["issue", "comment", issue, "--body-file", "-"], {
         input: effect.body,
       });
       return;
+    }
     case "swap-label":
       if (effect.to === "agent:implement" && !AGENT_PAT) {
         console.log(
