@@ -9,4 +9,9 @@ class CheckoutTest {
     void discountsOrdersAboveThreshold() {
         assertEquals(18_000L, new Checkout().totalCents(20_000L));
     }
+    @Test
+    void discountsOrdersAtExactThreshold() {
+        assertEquals(9_000L, new Checkout().totalCents(10_000L));
+    }
 }
+
