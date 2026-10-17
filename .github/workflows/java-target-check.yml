@@ -87,6 +87,7 @@ jobs:
           path: |
             verification.txt
             target/**/build/test-results/**/TEST-*.xml
+            target/**/target/test-results/**/TEST-*.xml
             target/**/target/surefire-reports/TEST-*.xml
             target/**/target/failsafe-reports/TEST-*.xml
           retention-days: 7
