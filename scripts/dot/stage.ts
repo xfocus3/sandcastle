@@ -135,7 +135,9 @@ if (script === "--resume") {
 } else {
   if (!script || !scripts.has(script))
     throw new Error("Choose an original supported stage script");
-  const refs = script.endsWith("/update-branch.ts") && process.env.BASE_REF
+  const refs = script.endsWith("/explore.ts")
+    ? []
+    : script.endsWith("/update-branch.ts") && process.env.BASE_REF
     ? [`origin/${process.env.BASE_REF}`]
     : ["main", ...(process.env.BASE_REF ? [`origin/${process.env.BASE_REF}`] : [])];
   const snapshot = await captureDotSnapshot(
