@@ -64,11 +64,11 @@ jobs:
           name: explore-batch
           path: ${{ runner.temp }}/batch/issues.json
 
-      - name: Checkout main
+      - name: Checkout default branch
         if: steps.batch.outputs.count != '0'
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -124,10 +124,10 @@ jobs:
       GH_REPO: ${{ github.repository }}
 
     steps:
-      - name: Checkout main
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Setup Node.js
