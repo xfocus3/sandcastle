@@ -1,16 +1,17 @@
 import * as path from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
-import { dotAgent, fail, required, safeSh, sh } from "../shared/common";
+import { dotAgent, fail, required, gh, sh } from "../shared/common";
 
 const ISSUE_NUMBER = required("ISSUE_NUMBER");
 const ISSUE_TITLE = required("ISSUE_TITLE");
 const BRANCH = required("BRANCH");
 
 try {
-  const issueContext =
-    safeSh(`gh issue view ${ISSUE_NUMBER} --comments`) ||
-    `Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}`;
+  const issueContext = gh([
+    "issue", "view", ISSUE_NUMBER,
+    "--json", "number,title,body,comments",
+  ]);
 
   const result = await sandcastle.run({
     name: `implement-#${ISSUE_NUMBER}`,
