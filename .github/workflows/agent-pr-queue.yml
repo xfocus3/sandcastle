@@ -5,11 +5,15 @@ on:
       mode:
         type: string
         required: true
+      verification_workflows:
+        type: string
+        default: '[]'
       pr_number:
         type: number
         default: 0
 permissions:
   contents: write
+  actions: read
   issues: read
   pull-requests: write
 jobs:
@@ -19,10 +23,17 @@ jobs:
       prs: ${{ steps.queue.outputs.prs }}
       count: ${{ steps.queue.outputs.count }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: xfocus3/sandcastle
+          ref: 7fc487de3fe609f607bc4ac3f5b55e564e013685
+          path: sandcastle-queue
+          persist-credentials: false
       - id: queue
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          VERIFICATION_WORKFLOWS: ${{ inputs.verification_workflows }}
           MODE: ${{ inputs.mode }}
           PR_NUMBER: ${{ inputs.pr_number }}
         run: |
@@ -34,6 +45,16 @@ jobs:
           esac
           prs=$(gh pr list --state open --label "$label" --limit 100 --json number,headRefName,headRefOid,baseRefName,isCrossRepository)
           prs=$(jq --argjson n "$PR_NUMBER" '[.[] | select(.isCrossRepository == false and ($n == 0 or .number == $n))]' <<< "$prs")
+          if [ "$MODE" = review ]; then
+            eligible='[]'
+            while IFS= read -r pr; do
+              head=$(jq -r .headRefOid <<< "$pr")
+              if node sandcastle-queue/scripts/dot/verification.mjs "$head" "$VERIFICATION_WORKFLOWS"; then
+                eligible=$(jq --argjson pr "$pr" '. + [$pr]' <<< "$eligible")
+              fi
+            done < <(jq -c '.[]' <<< "$prs")
+            prs=$eligible
+          fi
           echo "prs=$(jq -c . <<< "$prs")" >> "$GITHUB_OUTPUT"
           echo "count=$(jq length <<< "$prs")" >> "$GITHUB_OUTPUT"
   review:
@@ -44,13 +65,14 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@fdda89d8d0de98650a204c28a5c002da32a1cbab
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@7fc487de3fe609f607bc4ac3f5b55e564e013685
     with:
+      verification_workflows: ${{ inputs.verification_workflows }}
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: fdda89d8d0de98650a204c28a5c002da32a1cbab
+      tool_ref: 7fc487de3fe609f607bc4ac3f5b55e564e013685
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -59,13 +81,13 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@fdda89d8d0de98650a204c28a5c002da32a1cbab
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@7fc487de3fe609f607bc4ac3f5b55e564e013685
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: fdda89d8d0de98650a204c28a5c002da32a1cbab
+      tool_ref: 7fc487de3fe609f607bc4ac3f5b55e564e013685
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
@@ -74,10 +96,10 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@fdda89d8d0de98650a204c28a5c002da32a1cbab
+    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@7fc487de3fe609f607bc4ac3f5b55e564e013685
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: fdda89d8d0de98650a204c28a5c002da32a1cbab
+      tool_ref: 7fc487de3fe609f607bc4ac3f5b55e564e013685
