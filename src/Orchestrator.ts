@@ -36,11 +36,41 @@ const invokeAgent = (
   resumeSession?: string,
   forkSession?: boolean,
   signal?: AbortSignal,
+  hostRepoDir?: string,
 ): Effect.Effect<
   { result: string; sessionId?: string; usage?: IterationUsage },
   SandboxError
 > =>
   Effect.gen(function* () {
+    if (provider.invoke) {
+      return yield* Effect.tryPromise({
+        try: (interrupted) =>
+          provider.invoke!({
+            prompt,
+            dangerouslySkipPermissions: false,
+            resumeSession,
+            forkSession,
+            cwd: sandboxRepoDir,
+            hostCwd: hostRepoDir ?? sandboxRepoDir,
+            signal: signal
+              ? AbortSignal.any([signal, interrupted])
+              : interrupted,
+            exec: (command, stdin) =>
+              Effect.runPromise(
+                sandbox.exec(command, { cwd: sandboxRepoDir, stdin }),
+                {
+                  signal: signal
+                    ? AbortSignal.any([signal, interrupted])
+                    : interrupted,
+                },
+              ),
+          }),
+        catch: (error) =>
+          new AgentError({
+            message: error instanceof Error ? error.message : String(error),
+          }),
+      });
+    }
     let resultText = "";
     let sessionId: string | undefined;
     let usage: IterationUsage | undefined;
@@ -492,6 +522,7 @@ export const orchestrate = (
                   iterationResumeSession,
                   iterationForkSession,
                   options.signal,
+                  hostRepoDir,
                 );
 
                 // Flush any remaining buffered text deltas

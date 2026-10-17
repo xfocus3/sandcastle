@@ -98,3 +98,6 @@ export type {
   MergeToHeadBranchStrategy,
   NamedBranchStrategy,
 } from "./SandboxProvider.js";
+
+export { dot } from "./DotHandoff.js";
+export type { DotOptions, DotRequest, DotResponse } from "./DotHandoff.js";

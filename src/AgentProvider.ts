@@ -261,6 +261,21 @@ export interface AgentSessionStorage {
   findByIdOnHost(sessionId: string): Promise<HostSessionLookup>;
 }
 
+/** Host-side transport for agents that exchange work instead of launching a CLI. */
+export interface AgentInvocation extends AgentCommandOptions {
+  readonly cwd: string;
+  readonly hostCwd: string;
+  readonly signal?: AbortSignal;
+  readonly exec: (
+    command: string,
+    stdin?: string,
+  ) => Promise<{
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+  }>;
+}
+
 export interface AgentProvider {
   readonly name: string;
   /** Environment variables injected by this agent provider. Merged at launch time with env resolver and sandbox provider env. */
@@ -269,6 +284,11 @@ export interface AgentProvider {
   readonly captureSessions: boolean;
   /** Provider-owned storage and transfer behavior for resumable agent sessions. */
   readonly sessionStorage?: AgentSessionStorage;
+  invoke?(options: AgentInvocation): Promise<{
+    result: string;
+    sessionId?: string;
+    usage?: IterationUsage;
+  }>;
   buildPrintCommand(options: AgentCommandOptions): PrintCommand;
   buildInteractiveArgs?(options: AgentCommandOptions): string[];
   parseStreamLine(line: string): ParsedStreamEvent[];
