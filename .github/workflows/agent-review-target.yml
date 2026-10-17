@@ -14,6 +14,9 @@ on:
       base_ref:
         type: string
         required: true
+      verification_workflows:
+        type: string
+        default: '[]'
       tool_ref:
         type: string
         required: true
@@ -27,10 +30,12 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
+      actions: read
       issues: read
       pull-requests: write
 
     env:
+      VERIFICATION_WORKFLOWS: ${{ inputs.verification_workflows }}
       BASE_REF: ${{ inputs.base_ref }}
       PR_NUMBER: ${{ inputs.pr_number }}
       BRANCH: ${{ inputs.branch }}
@@ -79,6 +84,8 @@ jobs:
           ref: ${{ inputs.tool_ref }}
           path: sandcastle-tool
           persist-credentials: false
+      - name: Require passing checks before review
+        run: node ../sandcastle-tool/scripts/dot/verification.mjs "$BRANCH_HEAD_SHA" "$VERIFICATION_WORKFLOWS"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -130,7 +137,17 @@ jobs:
 
       - name: Mark PR ready
         if: success()
-        run: gh pr ready "$PR_NUMBER" || true
+        run: |
+          set -euo pipefail
+          head=$(git rev-parse HEAD)
+          remote_head=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          test "$head" = "$remote_head"
+          if ! node ../sandcastle-tool/scripts/dot/verification.mjs "$head" "$VERIFICATION_WORKFLOWS"; then
+            gh pr edit "$PR_NUMBER" --add-label "agent:review"
+            echo "Keeping draft status until the reviewed head passes verification."
+            exit 0
+          fi
+          gh pr ready "$PR_NUMBER"
 
       - name: Post thread replies
         if: success()
