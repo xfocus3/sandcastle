@@ -101,11 +101,11 @@ jobs:
           gh issue edit "$ISSUE_NUMBER" --remove-label "agent:blocked" || true
           gh issue edit "$ISSUE_NUMBER" --add-label "agent:in-progress"
 
-      - name: Checkout main
+      - name: Checkout default branch
         if: steps.shape.outputs.proceed == 'true' && steps.preflight.outputs.refused != 'true'
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           token: ${{ secrets.AGENT_PAT || secrets.GITHUB_TOKEN }}
 
@@ -124,6 +124,10 @@ jobs:
         run: |
           git config user.name "sandcastle-agent[bot]"
           git config user.email "sandcastle-agent[bot]@users.noreply.github.com"
+          # Keep the original prompt and commit-count baseline on a local alias.
+          if [ "$(git branch --show-current)" != "main" ]; then
+            git branch --force main HEAD
+          fi
           git checkout -b "$BRANCH"
 
       - name: Setup Node.js
@@ -166,6 +170,7 @@ jobs:
         id: open_pr
         env:
           BRANCH: ${{ steps.branch.outputs.name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           title="Fix #${ISSUE_NUMBER}: ${ISSUE_TITLE}"
           title="${title:0:256}"
@@ -175,7 +180,7 @@ jobs:
             echo
             echo "Implemented by the Sandcastle agent workflow."
           } > "$body_file"
-          pr_url=$(gh pr create --draft --base main --head "$BRANCH" --title "$title" --body-file "$body_file" | tail -n1)
+          pr_url=$(gh pr create --draft --base "$DEFAULT_BRANCH" --head "$BRANCH" --title "$title" --body-file "$body_file" | tail -n1)
           echo "pr_number=$(basename "$pr_url")" >> "$GITHUB_OUTPUT"
 
       - name: Request automated review
