@@ -157,7 +157,10 @@ export async function applyDotCommit(
     const tracked = await context.exec(
       `git ls-files --error-unmatch -- ${quote(file.path)}`,
     );
-    if (tracked.exitCode === 0)
+    const inHead = await context.exec(
+      `git cat-file -e ${quote(`${snapshot.head}:${file.path}`)}`,
+    );
+    if (tracked.exitCode === 0 || inHead.exitCode === 0)
       throw new Error(
         "Result would discard pre-existing worktree changes; reconcile them before applying",
       );

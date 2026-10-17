@@ -1,0 +1,56 @@
+name: Dot native handoff
+
+on:
+  push:
+    branches: [sandcastle/dot-e2e/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: dot-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare controlled branch
+        run: |
+          git checkout -B "$GITHUB_REF_NAME"
+          git branch -f main origin/main
+          git config user.name 'sandcastle-fixture[bot]'
+          git config user.email 'sandcastle-fixture[bot]@users.noreply.github.com'
+      - run: npm ci
+      - run: npm run build
+      - name: Run original stage with real native handoff
+        uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OUTPUT_DIR: ${{ runner.temp }}/dot-stage-output
+        with:
+          script: |
+            const { spawn } = require('node:child_process');
+            await new Promise((resolve, reject) => {
+              const child = spawn('npx', ['tsx', 'scripts/dot/e2e-stage.ts'], { stdio: 'inherit', env: process.env });
+              child.on('error', reject);
+              child.on('close', code => code === 0 ? resolve() : reject(new Error('Native stage exited with code ' + code)));
+            });
+      - name: Save stage outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dot-stage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dot-stage-output
+          if-no-files-found: warn

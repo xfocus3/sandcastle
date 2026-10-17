@@ -1,7 +1,7 @@
 // Parallel Planner with Review — four-phase orchestration loop
 //
 // This template drives a multi-phase workflow:
-//   Phase 1 (Plan):             An opus agent analyzes open issues, builds a
+//   Phase 1 (Plan):             A dot worker analyzes open issues, builds a
 //                               dependency graph, and outputs a <plan> JSON
 //                               listing unblocked issues with branch names.
 //   Phase 2 (Execute + Review): For each issue, a sandbox is created via
@@ -44,15 +44,20 @@ const planSchema = z.object({
 const MAX_ITERATIONS = 10;
 
 // Hooks run inside the sandbox before the agent starts each iteration.
-// npm install ensures the sandbox always has fresh dependencies.
+// Resolve Java dependencies using the repository wrapper; adapt modules/tasks as needed.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: "npm install" }] },
+  sandbox: {
+    onSandboxReady: [
+      {
+        command:
+          "if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; else echo 'Configure the Java project wrapper/module dependency command' >&2; exit 1; fi",
+      },
+    ],
+  },
 };
 
-// Copy node_modules from the host into the worktree before each sandbox
-// starts. Avoids a full npm install from scratch; the hook above handles
-// platform-specific binaries and any packages added since the last copy.
-const copyToWorktree = ["node_modules"];
+// Java dependency caches belong to the build tool, not the project worktree.
+const copyToWorktree: string[] = [];
 
 // ---------------------------------------------------------------------------
 // Main loop
@@ -64,7 +69,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // -------------------------------------------------------------------------
   // Phase 1: Plan
   //
-  // The planning agent (opus, for deeper reasoning) reads the open issue list,
+  // The planning agent (dot) reads the open issue list,
   // builds a dependency graph, and selects the issues that can be worked in
   // parallel right now (i.e., no blocking dependencies on other open issues).
   //
@@ -77,8 +82,8 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     // One iteration is enough: the planner just needs to read and reason,
     // not write code. (Structured output requires maxIterations: 1.)
     maxIterations: 1,
-    // Opus for planning: dependency analysis benefits from deeper reasoning.
-    agent: sandcastle.claudeCode("claude-opus-4-8"),
+    // dot performs the same planning stage through the handoff transport.
+    agent: sandcastle.dot(),
     promptFile: "./.sandcastle/plan-prompt.md",
     // Extract and validate the <plan> JSON into a typed object. Throws
     // StructuredOutputError if the tag is missing, the JSON is malformed, or
@@ -125,7 +130,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         const implement = await sandbox.run({
           name: "implementer",
           maxIterations: 100,
-          agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+          agent: sandcastle.dot(),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
             TASK_ID: issue.id,
@@ -139,7 +144,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
           const review = await sandbox.run({
             name: "reviewer",
             maxIterations: 1,
-            agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+            agent: sandcastle.dot(),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
               BRANCH: issue.branch,
@@ -210,7 +215,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker(),
     name: "merger",
     maxIterations: 1,
-    agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+    agent: sandcastle.dot({ refs: completedBranches }),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       // A markdown list of branch names, one per line.

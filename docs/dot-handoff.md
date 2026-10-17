@@ -6,8 +6,11 @@ review, extraction, retry, merge or publication logic.
 
 ## This checkpoint
 
-The provider and protocol tests are implemented. Existing entrypoints have not
-yet been switched to it. Live Actions artifact exchange, native-worker execution,
+The provider core passed Actions run 39032731103 at commit
+`f07639196203943400fac3e163e1c4a30b59e449`: 55 test files, 1460 passed,
+2 existing skipped tests. All five agent entrypoints and the local templates now
+use dot; JavaScript action steps supply the artifact runtime context.
+Live Actions artifact exchange, native-worker execution,
 mid-cycle Java checks and expired-runner recovery are **not yet verified**.
 Do not activate an existing privileged agent workflow to test this checkpoint.
 The feature-branch `Dot transport CI` workflow runs only deterministic tests.
@@ -57,7 +60,10 @@ have the published prerequisite commits; the helper never selects a new remote
 or runs project code. It restores unpublished objects, index stages, working
 changes and merge metadata. Build and tests still run in Actions.
 
-Snapshot capture currently requires Node and Git in a POSIX sandbox. It fails
+Snapshot capture currently requires Node and Git on a POSIX host with the same
+worktree (no-sandbox or a bind-mounted Docker/Podman sandbox). Isolated remote
+sandboxes are rejected until a cancellable snapshot transport is supported.
+Transport Git processes are killed as a group on cancellation/deadline. It fails
 closed for submodules, in-progress rebase/sequencer/autostash operations,
 potentially private file paths, escaping symlinks and capture errors. It does
 not silently omit these states. A result that would discard unrelated tracked
@@ -87,3 +93,31 @@ It supplies `resultHead`, the exact `changedPaths`, `status` (`completed` or
 returned; the original completion marker and output schema still determine
 whether the Sandcastle stage succeeded. Never put a fabricated test result in
 stdout or substitute it for an Actions run receipt.
+
+## Controlled end-to-end runs
+
+`Dot native handoff` runs the original stage script on pushes to
+`sandcastle/dot-e2e/<stage>`. Stages are `explore`, `implement`, `review`,
+`implement-pr`, and `update-branch`. The fixture context is in
+`test-fixtures/dot-java/context.json`; replace synthetic issue/PR numbers with
+coordinator-created controlled records before testing stages which require them.
+The workflow has read-only repository permissions and does not run the original
+publication/label steps. Passing this harness proves the stage handoff, not those
+GitHub side effects. Original label workflows retain their original behavior and
+permissions; do not use untrusted PR code to test them.
+
+`Dot Java check` runs Maven and Gradle fixtures on an exact pushed checkpoint on
+`sandcastle/dot-check/**`. It generates official wrappers on the runner and saves
+JUnit XML, keyed by the actual `github.sha`. Publish a failing regression first,
+observe the expected assertion failure, then publish the smallest fix and rerun.
+These runs happen while the original native invocation is waiting. Report the
+run ID, attempt, SHA, selected test and observed result; infrastructure failures
+are not behavioral RED evidence. Manual dispatch becomes available only after
+the workflow is registered on the repository's default branch; the bounded push
+triggers allow feature-branch verification first.
+
+The scaffolded Java Dockerfile uses `ARG JAVA_VERSION=17`. Set this to the target
+repository's actual JDK/toolchain version before building, rather than imposing
+17 on every Java project. The Java wrapper dependency hook is a starting point;
+use the repository's configured module/profile/task equivalents. Node remains
+required to run Sandcastle itself.

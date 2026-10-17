@@ -265,6 +265,8 @@ export interface AgentSessionStorage {
 export interface AgentInvocation extends AgentCommandOptions {
   readonly cwd: string;
   readonly hostCwd: string;
+  /** Present only when the sandbox shares a real host worktree. */
+  readonly worktreeCwd?: string;
   readonly signal?: AbortSignal;
   readonly exec: (
     command: string,

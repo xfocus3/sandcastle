@@ -34,10 +34,15 @@ await using worktree = await sandcastle.createWorktree({
     branch: branch,
     baseBranch: base,
   },
-  copyToWorktree: ["node_modules"],
+  copyToWorktree: [],
   hooks: {
     sandbox: {
-      onSandboxReady: [{ command: "npm install && npm run build" }],
+      onSandboxReady: [
+        {
+          command:
+            "if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; else echo 'Configure the Java project wrapper/module dependency command' >&2; exit 1; fi",
+        },
+      ],
     },
   },
 });
@@ -48,7 +53,7 @@ await using sandbox = await worktree.createSandbox({
 
 const result = await sandbox.run({
   name: "Implementer #" + issueNumber,
-  agent: sandcastle.claudeCode("claude-opus-4-8"),
+  agent: sandcastle.dot(),
   promptFile: "./.sandcastle/implement-prompt.md",
   promptArgs: {
     ISSUE_NUMBER: String(issueNumber),
@@ -60,7 +65,7 @@ const result = await sandbox.run({
 if (result.commits.length > 0) {
   await sandbox.run({
     name: "Reviewer #" + issueNumber,
-    agent: sandcastle.claudeCode("claude-opus-4-8"),
+    agent: sandcastle.dot(),
     promptFile: "./.sandcastle/review-prompt.md",
     promptArgs: {
       ISSUE_NUMBER: String(issueNumber),

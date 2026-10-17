@@ -86,18 +86,21 @@ jobs:
         if: steps.batch.outputs.count != '0'
         run: npm run build
 
-      - name: Install Claude Code
-        if: steps.batch.outputs.count != '0'
-        run: npm install -g @anthropic-ai/claude-code
-
-      # No GH_TOKEN in this step's env: the agent has no GitHub access at all.
+      # dot uses the standard artifact identity; no external model credentials.
       - name: Run explore agent
         if: steps.batch.outputs.count != '0'
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ISSUES_FILE: ${{ runner.temp }}/batch/issues.json
           OUTPUT_DIR: ${{ runner.temp }}/out
-        run: npx tsx .sandcastle/agent-workflows/explore/explore.ts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { spawn } = require('node:child_process');
+            await new Promise((resolve, reject) => {
+              const child = spawn('npx', ['tsx', '.sandcastle/agent-workflows/explore/explore.ts'], { stdio: 'inherit', env: process.env });
+              child.on('error', reject);
+              child.on('close', code => code === 0 ? resolve() : reject(new Error('Agent stage exited with code ' + code)));
+            });
 
       - name: Upload plan
         if: steps.batch.outputs.count != '0'

@@ -1,4 +1,4 @@
-import { run, claudeCode } from "@ai-hero/sandcastle";
+import { run, dot } from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
 // Simple loop: an agent that picks open issues one by one and closes them.
@@ -12,10 +12,9 @@ await run({
   // Sandbox provider — runs the agent inside an isolated container.
   sandbox: docker(),
 
-  // The agent provider. Pass a model string to claudeCode() — sonnet balances
-  // capability and speed for most tasks. Switch to claude-opus-4-8 for harder
-  // problems, or claude-haiku-4-5-20251001 for speed.
-  agent: claudeCode("claude-sonnet-4-6"),
+  // The agent provider. dot picks up the request and returns its result through
+  // the handoff transport; the original iteration loop remains in charge.
+  agent: dot(),
 
   // Path to the prompt file. Shell expressions inside are evaluated inside the
   // sandbox at the start of each iteration, so the agent always sees fresh data.
@@ -32,11 +31,8 @@ await run({
   // the host directory directly (no worktree to copy into).
   branchStrategy: { type: "merge-to-head" },
 
-  // Copy node_modules from the host into the worktree before the sandbox
-  // starts. This avoids a full npm install from scratch on every iteration.
-  // The onSandboxReady hook still runs npm install as a safety net to handle
-  // platform-specific binaries and any packages added since the last copy.
-  copyToWorktree: ["node_modules"],
+  // Java dependency caches belong to the build tool, not the project worktree.
+  copyToWorktree: [],
 
   // Lifecycle hooks — commands grouped by where they run (host or sandbox).
   hooks: {
@@ -44,7 +40,12 @@ await run({
       // onSandboxReady runs once after the sandbox is initialised and the repo is
       // synced in, before the agent starts. Use it to install dependencies or run
       // any other setup steps your project needs.
-      onSandboxReady: [{ command: "npm install" }],
+      onSandboxReady: [
+        {
+          command:
+            "if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; else echo 'Configure the Java project wrapper/module dependency command' >&2; exit 1; fi",
+        },
+      ],
     },
   },
 });

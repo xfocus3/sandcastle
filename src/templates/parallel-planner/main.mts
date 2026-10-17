@@ -1,12 +1,12 @@
 // Parallel Planner — three-phase orchestration loop
 //
 // This template drives a multi-phase workflow:
-//   Phase 1 (Plan):    An opus agent analyzes open issues, builds a dependency
+//   Phase 1 (Plan):    A dot worker analyzes open issues, builds a dependency
 //                      graph, and outputs a <plan> JSON listing unblocked issues
 //                      with their target branch names.
-//   Phase 2 (Execute): N sonnet agents run in parallel via Promise.allSettled,
+//   Phase 2 (Execute): N dot workers run in parallel via Promise.allSettled,
 //                      each working a single issue on its own branch.
-//   Phase 3 (Merge):   A sonnet agent merges all branches that produced commits.
+//   Phase 3 (Merge):   A dot worker merges all branches that produced commits.
 //
 // The outer loop repeats up to MAX_ITERATIONS times so that newly unblocked
 // issues are picked up after each round of merges.
@@ -39,15 +39,20 @@ const planSchema = z.object({
 const MAX_ITERATIONS = 10;
 
 // Hooks run inside the sandbox before the agent starts each iteration.
-// npm install ensures the sandbox always has fresh dependencies.
+// Resolve Java dependencies using the repository wrapper; adapt modules/tasks as needed.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: "npm install" }] },
+  sandbox: {
+    onSandboxReady: [
+      {
+        command:
+          "if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; else echo 'Configure the Java project wrapper/module dependency command' >&2; exit 1; fi",
+      },
+    ],
+  },
 };
 
-// Copy node_modules from the host into the worktree before each sandbox
-// starts. Avoids a full npm install from scratch; the hook above handles
-// platform-specific binaries and any packages added since the last copy.
-const copyToWorktree = ["node_modules"];
+// Java dependency caches belong to the build tool, not the project worktree.
+const copyToWorktree: string[] = [];
 
 // ---------------------------------------------------------------------------
 // Main loop
@@ -59,7 +64,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // -------------------------------------------------------------------------
   // Phase 1: Plan
   //
-  // The planning agent (opus, for deeper reasoning) reads the open issue list,
+  // The planning agent (dot) reads the open issue list,
   // builds a dependency graph, and selects the issues that can be worked in
   // parallel right now (i.e., no blocking dependencies on other open issues).
   //
@@ -72,8 +77,8 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     // One iteration is enough: the planner just needs to read and reason,
     // not write code. (Structured output requires maxIterations: 1.)
     maxIterations: 1,
-    // Opus for planning: dependency analysis benefits from deeper reasoning.
-    agent: sandcastle.claudeCode("claude-opus-4-8"),
+    // dot performs the same planning stage through the handoff transport.
+    agent: sandcastle.dot(),
     promptFile: "./.sandcastle/plan-prompt.md",
     // Extract and validate the <plan> JSON into a typed object. Throws
     // StructuredOutputError if the tag is missing, the JSON is malformed, or
@@ -117,7 +122,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         // Give each agent plenty of room to implement and iterate on tests.
         maxIterations: 100,
         // Sonnet for execution: fast and capable enough for typical issue work.
-        agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+        agent: sandcastle.dot(),
         promptFile: "./.sandcastle/implement-prompt.md",
         // Prompt arguments substitute {{TASK_ID}}, {{ISSUE_TITLE}},
         // and {{BRANCH}} placeholders in implement-prompt.md before the
@@ -188,7 +193,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     name: "merger",
     maxIterations: 1,
     // Sonnet is sufficient for merge conflict resolution.
-    agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+    agent: sandcastle.dot({ refs: completedBranches }),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       // A markdown list of branch names, one per line.

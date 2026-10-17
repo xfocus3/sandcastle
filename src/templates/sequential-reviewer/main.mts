@@ -1,7 +1,7 @@
 // Sequential Reviewer — implement-then-review loop
 //
 // This template drives a two-phase workflow per issue:
-//   Phase 1 (Implement): A sonnet agent picks an open issue, works on it
+//   Phase 1 (Implement): A dot worker picks an open issue, works on it
 //                        on a dedicated branch, commits the changes, and signals
 //                        completion.
 //   Phase 2 (Review):    A second sonnet agent reviews the branch diff and either
@@ -33,15 +33,20 @@ import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 const MAX_ITERATIONS = 10;
 
 // Hooks run inside the sandbox before the agent starts each iteration.
-// npm install ensures the sandbox always has fresh dependencies.
+// Resolve Java dependencies using the repository wrapper; adapt modules/tasks as needed.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: "npm install" }] },
+  sandbox: {
+    onSandboxReady: [
+      {
+        command:
+          "if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; else echo 'Configure the Java project wrapper/module dependency command' >&2; exit 1; fi",
+      },
+    ],
+  },
 };
 
-// Copy node_modules from the host into the worktree before each sandbox
-// starts. Avoids a full npm install from scratch; the hook above handles
-// platform-specific binaries and any packages added since the last copy.
-const copyToWorktree = ["node_modules"];
+// Java dependency caches belong to the build tool, not the project worktree.
+const copyToWorktree: string[] = [];
 
 // ---------------------------------------------------------------------------
 // Main loop
@@ -66,7 +71,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     // -----------------------------------------------------------------------
     // Phase 1: Implement
     //
-    // A sonnet agent picks the next open issue, writes the
+    // A dot worker picks the next open issue, writes the
     // implementation (using RGR: Red → Green → Repeat → Refactor), and
     // commits the result.
     //
@@ -79,7 +84,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     const implement = await sandbox.run({
       name: "implementer",
       maxIterations: 1,
-      agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+      agent: sandcastle.dot(),
       promptFile: "./.sandcastle/implement-prompt.md",
     });
 
@@ -103,7 +108,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     await sandbox.run({
       name: "reviewer",
       maxIterations: 1,
-      agent: sandcastle.claudeCode("claude-sonnet-4-6"),
+      agent: sandcastle.dot(),
       promptFile: "./.sandcastle/review-prompt.md",
       promptArgs: {
         BRANCH: branch,

@@ -11,7 +11,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const plan = await sandcastle.run({
     sandbox: docker(),
     name: "Planner",
-    agent: sandcastle.claudeCode("claude-opus-4-8"),
+    agent: sandcastle.dot(),
     promptFile: "./.sandcastle/plan-prompt.md",
   });
 
@@ -61,20 +61,25 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         await using sandbox = await sandcastle.createSandbox({
           sandbox: docker(),
           branch: issue.branch,
-          copyToWorktree: ["node_modules"],
+          copyToWorktree: [],
           hooks: {
             sandbox: {
-              onSandboxReady: [{ command: "npm install && npm run build" }],
+              onSandboxReady: [
+                {
+                  command:
+                    "if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; else echo 'Configure the Java project wrapper/module dependency command' >&2; exit 1; fi",
+                },
+              ],
             },
           },
         });
 
         const result = await sandbox.run({
           name: "Implementer #" + issue.number,
-          agent: sandcastle.claudeCode("claude-opus-4-8"),
+          agent: sandcastle.dot(),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
-            TASK_ID: String(issue.number),
+            ISSUE_NUMBER: String(issue.number),
             ISSUE_TITLE: issue.title,
             BRANCH: issue.branch,
           },
@@ -83,10 +88,10 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         if (result.commits.length > 0) {
           await sandbox.run({
             name: "Reviewer #" + issue.number,
-            agent: sandcastle.claudeCode("claude-opus-4-8"),
+            agent: sandcastle.dot(),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
-              TASK_ID: String(issue.number),
+              ISSUE_NUMBER: String(issue.number),
               ISSUE_TITLE: issue.title,
               BRANCH: issue.branch,
             },
@@ -143,7 +148,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker(),
     name: "Merger",
     maxIterations: 10,
-    agent: sandcastle.claudeCode("claude-opus-4-8"),
+    agent: sandcastle.dot({ refs: completedBranches }),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),

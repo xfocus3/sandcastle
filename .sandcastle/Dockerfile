@@ -1,4 +1,9 @@
+ARG JAVA_VERSION=17
+FROM eclipse-temurin:${JAVA_VERSION}-jdk AS java
 FROM node:22-bookworm
+COPY --from=java /opt/java/openjdk /opt/java/openjdk
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="/opt/java/openjdk/bin:$PATH"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -25,12 +30,7 @@ ARG AGENT_GID=1000
 RUN groupmod -o -g $AGENT_GID node && usermod -o -u $AGENT_UID -g $AGENT_GID -d /home/agent -m -l agent node
 USER ${AGENT_UID}:${AGENT_GID}
 
-# Install Claude Code CLI
-RUN curl -fsSL https://claude.ai/install.sh | bash
-
-# Add Claude to PATH
-ENV PATH="/home/agent/.local/bin:$PATH"
-
+# dot runs on the coordinator; no model CLI or key is installed.
 WORKDIR /home/agent
 
 # In worktree sandbox mode, Sandcastle bind-mounts the git worktree at /home/agent/workspace

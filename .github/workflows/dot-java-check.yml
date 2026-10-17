@@ -1,0 +1,51 @@
+name: Dot Java check
+
+on:
+  push:
+    branches: [sandcastle/dot-check/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  java:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [maven, gradle]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        if: matrix.build == 'gradle'
+        with:
+          gradle-version: "8.10.2"
+      - name: Generate Maven wrapper and verify
+        if: matrix.build == 'maven'
+        working-directory: test-fixtures/dot-java/maven
+        run: |
+          mvn -B org.apache.maven.plugins:maven-wrapper-plugin:3.3.2:wrapper -Dmaven=3.9.9 -Dtype=only-script
+          ./mvnw -B verify
+      - name: Generate Gradle wrapper and verify
+        if: matrix.build == 'gradle'
+        working-directory: test-fixtures/dot-java/gradle
+        run: |
+          gradle --no-daemon wrapper --gradle-version 8.10.2 --distribution-type bin
+          ./gradlew --no-daemon test
+      - name: Save exact-head test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-${{ matrix.build }}-${{ github.sha }}
+          path: |
+            test-fixtures/dot-java/maven/target/surefire-reports/TEST-*.xml
+            test-fixtures/dot-java/gradle/build/test-results/test/TEST-*.xml
+          if-no-files-found: error

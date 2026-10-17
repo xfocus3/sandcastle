@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+  mkdirSync,
+  chmodSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -53,6 +61,7 @@ function fixture() {
     dangerouslySkipPermissions: false,
     cwd: repo,
     hostCwd: repo,
+    worktreeCwd: repo,
     exec: async (command, stdin) => {
       const result = spawnSync("sh", ["-c", command], {
         cwd: repo,
@@ -128,6 +137,33 @@ describe("dot handoff", () => {
       exchange: async () => new Promise(() => {}),
     });
     await expect(provider.invoke!(context)).rejects.toThrow();
+  });
+
+  it("kills snapshot child processes when cancelled rather than allowing late writes", async () => {
+    const { root, repo, context } = fixture();
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    const marker = join(repo, "late-write");
+    writeFileSync(
+      join(bin, "node"),
+      `#!/bin/sh\nsleep 0.4\ntouch '${marker}'\n`,
+    );
+    chmodSync(join(bin, "node"), 0o755);
+    const oldPath = process.env.PATH;
+    process.env.PATH = `${bin}:${oldPath}`;
+    try {
+      const provider = dot({
+        repository: "fixture/repo",
+        directory: join(root, "mailbox"),
+        timeoutSeconds: 0.1,
+        exchange: async (request) => answer(request),
+      });
+      await expect(provider.invoke!(context)).rejects.toThrow();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(existsSync(marker)).toBe(false);
+    } finally {
+      process.env.PATH = oldPath;
+    }
   });
 
   it("refuses to apply a response after the worktree changes", async () => {
@@ -253,6 +289,28 @@ describe("dot snapshots", () => {
         "base64",
       ).toString(),
     ).toContain("<<<<<<<");
+  });
+
+  it("rejects a result that would resurrect an unrelated staged deletion", async () => {
+    const { repo, git, context } = fixture();
+    writeFileSync(join(repo, "Other.java"), "class Other {}\n");
+    git(["add", "."]);
+    git(["commit", "-m", "second source"]);
+    git(["push", "origin", "HEAD:main"]);
+    const input = git(["rev-parse", "HEAD"]);
+    writeFileSync(join(repo, "Other.java"), "class Changed {}\n");
+    git(["add", "."]);
+    git(["commit", "-m", "result"]);
+    const result = git(["rev-parse", "HEAD"]);
+    git(["push", "origin", "HEAD:result"]);
+    git(["reset", "--hard", input]);
+    git(["rm", "Example.java"]);
+    const snapshot = await captureDotSnapshot(context);
+    await expect(
+      applyDotCommit(context, snapshot, result, ["Other.java"]),
+    ).rejects.toThrow("pre-existing");
+    expect(existsSync(join(repo, "Example.java"))).toBe(false);
+    expect(git(["diff", "--cached", "--name-status"])).toBe("D\tExample.java");
   });
 
   it("applies only a published descendant and leaves unrelated heads untouched", async () => {

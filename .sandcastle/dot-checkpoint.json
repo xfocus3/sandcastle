@@ -3,17 +3,24 @@
   "branch": "feat/java-agent-workflows",
   "baseline": "7a4e7f7d93056600d979d79a090256feddf653ea",
   "promptCheckpoint": "c0451cd8ce544f790b8fcfbe1ced797335350202",
-  "status": "transport-core-awaiting-actions-verification",
+  "status": "entrypoints-wired-awaiting-native-e2e",
   "next": [
-    "Review and publish transport core; collect its exact Actions run and head",
-    "Wire JavaScript-action artifact context and dot provider entrypoints",
-    "Verify a real native handoff with exact-SHA Java red/green Actions feedback",
+    "Publish wiring and safety regressions; verify exact new Actions head",
+    "Run controlled native implement stage and exact-SHA Java RED/GREEN checks",
+    "Exercise each remaining original stage and local template path",
     "Implement and test durable stage-boundary recovery after runner loss"
   ],
   "verification": {
     "localBuildsOrTests": false,
-    "actionsRun": null,
+    "actionsRun": {
+      "id": 39032731103,
+      "head": "f07639196203943400fac3e163e1c4a30b59e449",
+      "conclusion": "success",
+      "passedTests": 1460,
+      "skippedTests": 2
+    },
     "nativeHandoffVerified": false,
     "expiredRunnerRecoveryVerified": false
-  }
+  },
+  "transportCheckpoint": "f07639196203943400fac3e163e1c4a30b59e449"
 }

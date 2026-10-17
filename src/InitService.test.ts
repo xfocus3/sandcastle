@@ -8,6 +8,7 @@ import {
   scaffold,
   getNextStepsLines,
   getAgent,
+  listAgents,
   listTemplates,
   listIssueTrackers,
   getIssueTracker,
@@ -23,6 +24,7 @@ import { SKELETON_PROMPT } from "./templates.js";
 
 const makeDir = () => mkdtemp(join(tmpdir(), "init-service-"));
 
+const dotAgent = getAgent("dot")!;
 const claudeCodeAgent = getAgent("claude-code")!;
 const piAgent = getAgent("pi")!;
 const codexAgent = getAgent("codex")!;
@@ -30,6 +32,7 @@ const cursorAgent = getAgent("cursor")!;
 const opencodeAgent = getAgent("opencode")!;
 const copilotAgent = getAgent("copilot")!;
 
+// Preserve explicit Claude coverage; dot-specific tests select dot below.
 const defaultOptions: ScaffoldOptions = {
   agent: claudeCodeAgent,
   model: "claude-opus-4-8",
@@ -47,6 +50,149 @@ const runScaffold = (repoDir: string, options?: Partial<ScaffoldOptions>) =>
 // ---------------------------------------------------------------------------
 
 describe("InitService scaffold", () => {
+  describe("dot agent", () => {
+    it("lists dot first while retaining the explicit CLI providers", () => {
+      expect(listAgents()[0]).toBe(dotAgent);
+      expect(dotAgent.factoryImport).toBe("dot");
+      expect(dotAgent.defaultModel).toBe("native");
+      expect(listAgents()).toContain(claudeCodeAgent);
+      expect(listAgents()).toContain(codexAgent);
+    });
+
+    it.each([
+      { templateName: "blank", plainCalls: 1, refsCalls: 0 },
+      { templateName: "simple-loop", plainCalls: 1, refsCalls: 0 },
+      { templateName: "sequential-reviewer", plainCalls: 2, refsCalls: 0 },
+      { templateName: "parallel-planner", plainCalls: 2, refsCalls: 1 },
+      {
+        templateName: "parallel-planner-with-review",
+        plainCalls: 3,
+        refsCalls: 1,
+      },
+    ])(
+      "$templateName scaffolds dot calls without model arguments and preserves merge refs",
+      async ({ templateName, plainCalls, refsCalls }) => {
+        const dir = await makeDir();
+        await runScaffold(dir, {
+          agent: dotAgent,
+          model: dotAgent.defaultModel,
+          templateName,
+        });
+
+        const mainTs = await readFile(
+          join(dir, ".sandcastle", "main.mts"),
+          "utf-8",
+        );
+        expect(
+          mainTs.match(/agent: (?:sandcastle\.)?dot\(\)/g) ?? [],
+        ).toHaveLength(plainCalls);
+        expect(
+          mainTs.match(
+            /agent: (?:sandcastle\.)?dot\(\{ refs: completedBranches \}\)/g,
+          ) ?? [],
+        ).toHaveLength(refsCalls);
+        expect(mainTs).not.toMatch(/dot\(["']/);
+        expect(mainTs).not.toContain("claudeCode");
+        if (templateName !== "blank") {
+          expect(mainTs).toContain("onSandboxReady");
+          expect(mainTs).toContain("./mvnw -B dependency:go-offline");
+          expect(mainTs).toContain("./gradlew --no-daemon dependencies");
+          expect(mainTs).not.toContain("npm install");
+          expect(mainTs).not.toContain("node_modules");
+        }
+      },
+    );
+
+    it.each(["github-issues", "beads"])(
+      "dot with %s needs no external model credential",
+      async (issueTrackerName) => {
+        const dir = await makeDir();
+        await runScaffold(dir, {
+          agent: dotAgent,
+          model: dotAgent.defaultModel,
+          issueTracker: getIssueTracker(issueTrackerName),
+        });
+
+        const envExample = await readFile(
+          join(dir, ".sandcastle", ".env.example"),
+          "utf-8",
+        );
+        expect(envExample).toContain("No external model key");
+        expect(envExample).not.toMatch(
+          /(?:CLAUDE_CODE_OAUTH_TOKEN|ANTHROPIC_API_KEY|OPENAI_KEY|OPENCODE_API_KEY|CURSOR_API_KEY|COPILOT_GITHUB_TOKEN|GITHUB_TOKEN)=/,
+        );
+        expect(envExample.includes("GH_TOKEN=")).toBe(
+          issueTrackerName === "github-issues",
+        );
+        expect(envExample).not.toContain("claude setup-token");
+      },
+    );
+
+    it("scaffolds Java 17 with a Docker build-arg override and no model CLI installation", async () => {
+      const dir = await makeDir();
+      await runScaffold(dir, {
+        agent: dotAgent,
+        model: dotAgent.defaultModel,
+      });
+
+      const dockerfile = await readFile(
+        join(dir, ".sandcastle", "Dockerfile"),
+        "utf-8",
+      );
+      expect(dockerfile).toMatch(
+        /^ARG JAVA_VERSION=17\nFROM eclipse-temurin:\$\{JAVA_VERSION\}-jdk AS java\n/,
+      );
+      expect(dockerfile).toContain("FROM node:22-bookworm");
+      expect(dockerfile).toContain(
+        "COPY --from=java /opt/java/openjdk /opt/java/openjdk",
+      );
+      expect(dockerfile).toContain("ENV JAVA_HOME=/opt/java/openjdk");
+      expect(dockerfile).toContain('ENV PATH="/opt/java/openjdk/bin:$PATH"');
+      expect(dockerfile).toContain("GitHub CLI");
+      expect(dockerfile).not.toContain("{{ISSUE_TRACKER_TOOLS}}");
+      expect(dockerfile).not.toMatch(
+        /claude\.ai\/install|@openai\/codex|@mariozechner\/pi-coding-agent|cursor\.com\/install|opencode-ai|@github\/copilot/,
+      );
+    });
+
+    it.each([
+      claudeCodeAgent,
+      piAgent,
+      codexAgent,
+      cursorAgent,
+      opencodeAgent,
+      copilotAgent,
+    ])(
+      "rewrites dot merge refs to the selected $name factory and model",
+      async (agent) => {
+        for (const templateName of [
+          "parallel-planner",
+          "parallel-planner-with-review",
+        ]) {
+          const dir = await makeDir();
+          const model = "selected-test-model";
+          await runScaffold(dir, { agent, model, templateName });
+
+          const mainTs = await readFile(
+            join(dir, ".sandcastle", "main.mts"),
+            "utf-8",
+          );
+          const calls = mainTs.match(/agent: sandcastle\.[^\n]+/g) ?? [];
+          expect(calls).toHaveLength(
+            templateName === "parallel-planner" ? 3 : 4,
+          );
+          for (const call of calls) {
+            expect(call).toBe(
+              `agent: sandcastle.${agent.factoryImport}("${model}"),`,
+            );
+          }
+          expect(mainTs).not.toContain("sandcastle.dot(");
+          expect(mainTs).not.toContain("refs: completedBranches");
+        }
+      },
+    );
+  });
+
   it("uses agent dockerfileTemplate for Dockerfile (with templateArgs substitution)", async () => {
     const dir = await makeDir();
     await runScaffold(dir);
@@ -171,7 +317,7 @@ describe("InitService scaffold", () => {
     );
   });
 
-  it("includes .env, logs/, and worktrees/ in .gitignore but not patches/", async () => {
+  it("includes .env, logs/, worktrees/, and dot/ in .gitignore but not patches/", async () => {
     const dir = await makeDir();
     await runScaffold(dir);
 
@@ -182,6 +328,7 @@ describe("InitService scaffold", () => {
     expect(gitignore).toContain(".env");
     expect(gitignore).toContain("logs/");
     expect(gitignore).toContain("worktrees/");
+    expect(gitignore).toContain("dot/");
     expect(gitignore).not.toContain("patches/");
   });
 
@@ -197,6 +344,7 @@ describe("InitService scaffold", () => {
   });
 
   it.each([
+    dotAgent,
     claudeCodeAgent,
     piAgent,
     codexAgent,
@@ -358,10 +506,11 @@ describe("InitService scaffold", () => {
     expect(mainTs).toContain("run(");
     expect(mainTs).toContain("maxIterations");
     expect(mainTs).toContain("3");
-    // When scaffolded with default model, simple-loop uses claude-opus-4-8
-    // (rewritten from template's claude-sonnet-4-6)
+    // This test explicitly selects Claude while the source template uses dot.
     expect(mainTs).toContain("promptFile");
-    expect(mainTs).toContain("npm install");
+    expect(mainTs).toContain("./mvnw -B dependency:go-offline");
+    expect(mainTs).toContain("./gradlew --no-daemon dependencies");
+    expect(mainTs).not.toContain("npm install");
     expect(mainTs).toContain("onSandboxReady");
   });
 
@@ -616,18 +765,20 @@ describe("InitService scaffold", () => {
       expect(joined).toContain("npm run sandcastle");
     });
 
-    it("non-blank template includes a note about customizing the install command", () => {
+    it("non-blank template includes a note about adapting Java dependency commands", () => {
       const lines = next("simple-loop", "main.mts");
       const joined = lines.join("\n");
-      expect(joined).toContain("npm install");
-      expect(joined).toContain("onSandboxReady");
+      expect(joined).toContain("Maven/Gradle wrapper dependency hook");
+      expect(joined).toContain("actual modules/tasks");
     });
 
-    it("non-blank template mentions copyToWorktree and node_modules", () => {
+    it("non-blank template mentions the configured Java version rather than Node dependency copying", () => {
       const lines = next("simple-loop", "main.mts");
       const joined = lines.join("\n");
-      expect(joined).toContain("copyToWorktree");
-      expect(joined).toContain("node_modules");
+      expect(joined).toContain("JAVA_VERSION");
+      expect(joined).toContain("target repository's JDK");
+      expect(joined).not.toContain("copyToWorktree");
+      expect(joined).not.toContain("node_modules");
     });
 
     it("blank template includes a step to customize prompt.md", () => {
@@ -788,6 +939,20 @@ describe("InitService scaffold", () => {
       const joined = lines.join("\n");
       expect(joined.toLowerCase()).toContain("host");
       expect(joined).toContain(getAgent("opencode")!.setupCommand);
+    });
+
+    it("dot custom tracker setup does not ask for an installed model CLI", () => {
+      const joined = getNextStepsLines(
+        "blank",
+        "main.mts",
+        customManager,
+        dotAgent,
+        "npm",
+      ).join("\n");
+      expect(joined).toContain(dotAgent.setupCommand);
+      expect(joined).toContain("SETUP_ISSUE_TRACKER.md");
+      expect(joined).not.toContain("CLI installed locally");
+      expect(joined).not.toContain("claude setup-token");
     });
   });
 
@@ -990,7 +1155,7 @@ describe("InitService scaffold", () => {
       ).resolves.toBeUndefined();
     });
 
-    it("main.mts uses npm install hook and imports sandcastle", async () => {
+    it("main.mts uses a Java wrapper dependency hook and imports sandcastle", async () => {
       const dir = await makeDir();
       await runScaffold(dir, { templateName: "parallel-planner" });
 
@@ -998,7 +1163,9 @@ describe("InitService scaffold", () => {
         join(dir, ".sandcastle", "main.mts"),
         "utf-8",
       );
-      expect(mainTs).toContain("npm install");
+      expect(mainTs).toContain("./mvnw -B dependency:go-offline");
+      expect(mainTs).toContain("./gradlew --no-daemon dependencies");
+      expect(mainTs).not.toContain("npm install");
       expect(mainTs).toContain("sandcastle");
     });
 
@@ -1412,6 +1579,11 @@ describe("InitService scaffold", () => {
 
   describe("Agent setupCommand", () => {
     it.each([
+      {
+        name: "dot",
+        command:
+          "Ask dot to apply .sandcastle/SETUP_ISSUE_TRACKER.md to this project",
+      },
       {
         name: "claude-code",
         command: `claude "$(cat .sandcastle/SETUP_ISSUE_TRACKER.md)"`,

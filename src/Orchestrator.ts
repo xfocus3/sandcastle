@@ -37,6 +37,7 @@ const invokeAgent = (
   forkSession?: boolean,
   signal?: AbortSignal,
   hostRepoDir?: string,
+  hostWorktreePath?: string,
 ): Effect.Effect<
   { result: string; sessionId?: string; usage?: IterationUsage },
   SandboxError
@@ -52,6 +53,7 @@ const invokeAgent = (
             forkSession,
             cwd: sandboxRepoDir,
             hostCwd: hostRepoDir ?? sandboxRepoDir,
+            worktreeCwd: hostWorktreePath,
             signal: signal
               ? AbortSignal.any([signal, interrupted])
               : interrupted,
@@ -523,6 +525,9 @@ export const orchestrate = (
                   iterationForkSession,
                   options.signal,
                   hostRepoDir,
+                  bindMountHandle || ctx.sandboxRepoDir === hostWorktreePath
+                    ? hostWorktreePath
+                    : undefined,
                 );
 
                 // Flush any remaining buffered text deltas

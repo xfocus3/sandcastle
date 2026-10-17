@@ -1,0 +1,11 @@
+[
+  {
+    "number": 999001,
+    "title": "Basket repeated item additions lose the previous quantity",
+    "body": "Controlled fixture: inspect test-fixtures/dot-java/maven. Adding 2 then 3 should total 5.",
+    "author": { "login": "fixture" },
+    "createdAt": "2026-10-17T00:00:00Z",
+    "url": "https://github.com/xfocus3/sandcastle",
+    "comments": []
+  }
+]

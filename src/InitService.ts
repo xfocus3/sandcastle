@@ -7,6 +7,7 @@ import { SANDBOX_REPO_DIR } from "./SandboxFactory.js";
 const GITIGNORE = `.env
 logs/
 worktrees/
+dot/
 `;
 
 /**
@@ -406,7 +407,25 @@ WORKDIR /home/agent
 ENTRYPOINT ["sleep", "infinity"]
 `;
 
+const DOT_DOCKERFILE = CLAUDE_CODE_DOCKERFILE.replace(
+  "FROM node:22-bookworm",
+  'ARG JAVA_VERSION=17\nFROM eclipse-temurin:${JAVA_VERSION}-jdk AS java\nFROM node:22-bookworm\nCOPY --from=java /opt/java/openjdk /opt/java/openjdk\nENV JAVA_HOME=/opt/java/openjdk\nENV PATH="/opt/java/openjdk/bin:$PATH"',
+).replace(
+  /# Install Claude Code CLI[\s\S]*?WORKDIR \/home\/agent/,
+  "# dot runs on the coordinator; no model CLI or key is installed.\nWORKDIR /home/agent",
+);
+
 const AGENT_REGISTRY: AgentEntry[] = [
+  {
+    name: "dot",
+    label: "dot (native handoff)",
+    defaultModel: "native",
+    factoryImport: "dot",
+    dockerfileTemplate: DOT_DOCKERFILE,
+    envExample:
+      "# dot infers the same GitHub repository from origin. No external model key.\n# Set the target JDK with Docker build arg JAVA_VERSION.\n",
+    setupCommand: `Ask dot to apply ${SETUP_ISSUE_TRACKER_PATH} to this project`,
+  },
   {
     name: "claude-code",
     label: "Claude Code",
@@ -636,7 +655,11 @@ export function getNextStepsLines(
       "1. Your custom issue tracker isn't wired up yet — runs hard-fail until you configure it.",
       `2. Feed the setup prompt to ${agent.label} on your host to finish wiring it up:`,
       `   ${agent.setupCommand}`,
-      `   (Runs on the host — you need the ${agent.label} CLI installed locally, since the sandbox image isn't built yet.)`,
+      ...(agent.name === "dot"
+        ? []
+        : [
+            `   (Runs on the host — you need the ${agent.label} CLI installed locally, since the sandbox image isn't built yet.)`,
+          ]),
       `3. Follow .sandcastle/${SETUP_ISSUE_TRACKER_DOC} to edit the scaffolded files in place, build the image, and verify.`,
     ];
   }
@@ -672,7 +695,7 @@ export function getNextStepsLines(
     }
     lines.push(
       `${step++}. Add "sandcastle": "npx tsx .sandcastle/${mainFilename}" to your package.json scripts`,
-      `${step++}. Templates use \`copyToWorktree: ["node_modules"]\` to copy your host node_modules into the sandbox for fast startup — the \`npm install\` in the onSandboxReady hook is a safety net for platform-specific binaries. Adjust both if you use a different package manager`,
+      `${step++}. Set the sandbox JAVA_VERSION to the target repository's JDK and adapt its Maven/Gradle wrapper dependency hook to the actual modules/tasks`,
     );
     if (usesPlanSchema) {
       lines.push(
@@ -790,15 +813,20 @@ const rewriteMainTs = (
     // Replace factory function name in imports (e.g. claudeCode → pi)
     // and all factory calls with the correct model.
     // Templates always use claudeCode as the placeholder factory.
-    content = content.replace(/\bclaudeCode\b/g, agent.factoryImport);
+    if (agent.name !== "dot")
+      content = content.replace(
+        /dot\(\{ refs: completedBranches \}\)/g,
+        `${agent.factoryImport}("${model}")`,
+      );
+    content = content.replace(/\b(?:claudeCode|dot)\b/g, agent.factoryImport);
     // Replace model strings in factory calls: factoryImport("any-model")
     const factoryCallRe = new RegExp(
-      `${agent.factoryImport}\\(["']([^"']+)["']\\)`,
+      `${agent.factoryImport}\\((?:["'][^"']+["'])?\\)`,
       "g",
     );
     content = content.replace(
       factoryCallRe,
-      `${agent.factoryImport}("${model}")`,
+      agent.name === "dot" ? "dot()" : `${agent.factoryImport}("${model}")`,
     );
 
     // Replace the sandbox provider. Templates always use `docker` as the

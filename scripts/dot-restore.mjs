@@ -38,6 +38,10 @@ try {
       git(["update-ref", ref, sha]);
     }
   }
+  if (snapshot.branch !== "HEAD") {
+    git(["check-ref-format", `refs/heads/${snapshot.branch}`]);
+    git(["checkout", "-B", snapshot.branch, snapshot.head]);
+  }
   git(["unpack-objects", "-r"], Buffer.from(snapshot.indexObjects, "base64"));
   git(["read-tree", "--empty"]);
   git(["update-index", "-z", "--index-info"], snapshot.index);

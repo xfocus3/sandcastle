@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import type { AgentInvocation, AgentProvider } from "./AgentProvider.js";
 import {
@@ -37,7 +38,7 @@ export interface DotResponse {
 }
 
 export interface DotOptions {
-  /** Same GitHub repository as the worktree. Defaults to GITHUB_REPOSITORY. */
+  /** Same GitHub repository as the worktree. Defaults to GITHUB_REPOSITORY or the GitHub origin. */
   repository?: string;
   /** Coordinator-owned response branch; response files never select a remote. */
   responseRef?: string;
@@ -82,6 +83,56 @@ export function validateDotResponse(
       "Dot reported the handoff blocked; inspect the response record",
     );
   return response;
+}
+
+function localContext(
+  context: AgentInvocation,
+  signal: AbortSignal,
+): AgentInvocation {
+  if (!context.worktreeCwd || process.platform === "win32") {
+    throw new Error(
+      "Dot currently requires a POSIX host worktree (no-sandbox or bind-mounted sandbox)",
+    );
+  }
+  return {
+    ...context,
+    signal,
+    exec: (command, stdin) =>
+      new Promise((resolveCommand, reject) => {
+        signal.throwIfAborted();
+        const child = spawn("sh", ["-c", command], {
+          cwd: context.worktreeCwd,
+          detached: true,
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+        let stdout = "";
+        let stderr = "";
+        const abort = () => {
+          if (child.pid) {
+            try {
+              process.kill(-child.pid, "SIGKILL");
+            } catch {}
+          }
+        };
+        signal.addEventListener("abort", abort, { once: true });
+        child.stdout.on("data", (chunk) => {
+          stdout += chunk.toString();
+        });
+        child.stderr.on("data", (chunk) => {
+          stderr += chunk.toString();
+        });
+        child.stdin.end(stdin);
+        child.on("error", (error) => {
+          signal.removeEventListener("abort", abort);
+          reject(error);
+        });
+        child.on("close", (code) => {
+          signal.removeEventListener("abort", abort);
+          if (signal.aborted) reject(signal.reason);
+          else resolveCommand({ stdout, stderr, exitCode: code ?? 1 });
+        });
+      }),
+  };
 }
 
 async function withAbort<T>(
@@ -202,37 +253,44 @@ export function dot(options: DotOptions = {}): AgentProvider {
     },
     parseStreamLine: () => [],
     invoke: async (context: AgentInvocation) => {
-      const repository = options.repository ?? process.env.GITHUB_REPOSITORY;
-      if (!repository || !/^[\w.-]+\/[\w.-]+$/.test(repository))
-        throw new Error("Set the dot repository to owner/repo");
+      const deadline = AbortSignal.timeout(timeoutSeconds * 1000);
+      const signal = context.signal
+        ? AbortSignal.any([deadline, context.signal])
+        : deadline;
+      context = localContext(context, signal);
+      let repository = options.repository ?? process.env.GITHUB_REPOSITORY;
       if (!options.exchange) {
         const remote = await context.exec("git remote get-url origin");
-        const name = remote.stdout
+        const match = remote.stdout
           .trim()
-          .replace(/^git@github\.com:/, "https://github.com/")
-          .replace(/\.git$/, "");
+          .match(
+            /^(?:https:\/\/github\.com\/|git@github\.com:)([\w.-]+\/[\w.-]+?)(?:\.git)?$/,
+          );
         if (
           remote.exitCode !== 0 ||
-          name !== `https://github.com/${repository}`
+          !match ||
+          (repository && repository !== match[1])
         ) {
           throw new Error(
             "Dot repository must match the worktree's GitHub origin",
           );
         }
+        repository ??= match[1];
       }
+      if (!repository || !/^[\w.-]+\/[\w.-]+$/.test(repository))
+        throw new Error("Set the dot repository to owner/repo");
       const id = randomUUID();
       const sessionId =
         context.resumeSession && !context.forkSession
           ? context.resumeSession
           : randomUUID();
-      const deadline = AbortSignal.timeout(timeoutSeconds * 1000);
-      const signal = context.signal
-        ? AbortSignal.any([deadline, context.signal])
-        : deadline;
       let prompt = context.prompt;
-      for (const local of [context.cwd, context.hostCwd, homedir()].sort(
-        (a, b) => b.length - a.length,
-      )) {
+      for (const local of [
+        context.cwd,
+        context.hostCwd,
+        context.worktreeCwd!,
+        homedir(),
+      ].sort((a, b) => b.length - a.length)) {
         if (local.length > 1) prompt = prompt.replaceAll(local, "<workspace>");
       }
       const unsigned = {
@@ -263,13 +321,16 @@ export function dot(options: DotOptions = {}): AgentProvider {
       await writeFile(requestFile, JSON.stringify(request, null, 2));
       if (process.env.GITHUB_ACTIONS === "true" && !options.exchange) {
         const { DefaultArtifactClient } = await import("@actions/artifact");
-        const { id: artifactId } =
-          await new DefaultArtifactClient().uploadArtifact(
+        const { id: artifactId } = await withAbort(
+          new DefaultArtifactClient().uploadArtifact(
             `dot-request-${id}`,
             [requestFile],
             requestDirectory,
             { retentionDays: 7 },
-          );
+          ),
+          signal,
+        );
+        signal.throwIfAborted();
         console.log(
           `Awaiting dot: request ${id}, artifact ${artifactId}. The agent has not completed.`,
         );
