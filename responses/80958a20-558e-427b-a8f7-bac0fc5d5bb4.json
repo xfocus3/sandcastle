@@ -1,0 +1,13 @@
+{
+  "id": "80958a20-558e-427b-a8f7-bac0fc5d5bb4",
+  "requestHash": "c5944b0293db498a779f4c5236e68aea841676f185ba62a63d5f78261e039fcb",
+  "runId": "39038153470",
+  "runAttempt": "1",
+  "head": "e51c9430fc9a1706c0bf9ef284b7a384b2146627",
+  "resultHead": "eb72345cd5f978393df324790e30ccde13b4c535",
+  "changedPaths": [
+    "test-fixtures/dot-java/maven/src/test/java/example/BasketTest.java"
+  ],
+  "status": "completed",
+  "stdout": "Addressed the actionable request in comment 6234664340 by adding returnsZeroForMissingItem to BasketTest. Production code remains unchanged as requested. Exact commit eb72345cd5f978393df324790e30ccde13b4c535 passed Java workflow 39038271915: Maven 3 tests, zero failures/errors/skips; Gradle also passed. This is additional coverage of existing behavior, not a new failing bug reproduction. The earlier automated review-failure comment is stale context. No review threads were resolved and no comments or labels were directly changed by the native task. <promise>COMPLETE</promise>"
+}
