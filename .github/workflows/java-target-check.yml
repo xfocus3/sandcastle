@@ -65,12 +65,20 @@ jobs:
           ARGUMENTS: ${{ inputs.arguments }}
         run: |
           set -euo pipefail
-          readarray -t args < <(python3 -c 'import json,os; a=json.loads(os.environ["ARGUMENTS"]); assert isinstance(a,list) and a and all(isinstance(x,str) and "\n" not in x for x in a); print("\n".join(a))')
-          case "$BUILD_TOOL" in
-            gradle) ./gradlew --no-daemon "${args[@]}" ;;
-            maven) ./mvnw -B "${args[@]}" ;;
-            *) exit 1 ;;
-          esac
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+          args = json.loads(os.environ["ARGUMENTS"])
+          if not isinstance(args, list) or not args or not all(isinstance(x, str) and "\n" not in x for x in args):
+              raise ValueError("Check arguments must be a nonempty JSON string array")
+          tool = os.environ["BUILD_TOOL"]
+          if tool == "gradle":
+              command = ["./gradlew", "--no-daemon"]
+          elif tool == "maven":
+              command = ["./mvnw", "-B"]
+          else:
+              raise ValueError("Unsupported Java build tool")
+          sys.exit(subprocess.run(command + args).returncode)
+          PY
       - name: Save exact-revision verification reports
         if: always()
         uses: actions/upload-artifact@v4
