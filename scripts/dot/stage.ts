@@ -38,9 +38,20 @@ const controllerPaths = [
   ".sandcastle/agent-workflows",
   ".github/workflows",
 ];
+const toolRoot = resolve(import.meta.dirname, "../..");
+const externalTarget = toolRoot !== process.cwd();
 const controllerHash = () =>
-  hash(git("ls-tree", "-r", "HEAD", "--", ...controllerPaths));
-const directory = resolve(".sandcastle/dot/stage");
+  externalTarget
+    ? hash({
+        tool: git("-C", toolRoot, "ls-tree", "-r", "HEAD", "--", ...controllerPaths),
+        workflows: git("ls-tree", "-r", "HEAD", "--", ".github/workflows"),
+      })
+    : hash(git("ls-tree", "-r", "HEAD", "--", ...controllerPaths));
+const handoffRoot = externalTarget
+  ? resolve(git("rev-parse", "--git-path", "sandcastle-dot"))
+  : resolve(".sandcastle/dot");
+if (externalTarget) process.env.SANDCASTLE_DOT_DIRECTORY = handoffRoot;
+const directory = join(handoffRoot, "stage");
 mkdirSync(directory, { recursive: true });
 let script = process.argv[2];
 let replay: unknown;
@@ -117,7 +128,7 @@ if (script === "--resume") {
   writeFileSync(file, JSON.stringify({ ...request, hash: hash(request) }));
   execFileSync(
     process.execPath,
-    ["scripts/dot-restore.mjs", file, process.cwd()],
+    [join(toolRoot, "scripts/dot-restore.mjs"), file, process.cwd()],
     { stdio: "inherit" },
   );
   for (const key of keys) {
@@ -204,7 +215,7 @@ process.env.SANDCASTLE_DOT_STAGE = JSON.stringify({
   script,
 });
 const code = await new Promise<number>((done, fail) => {
-  const child = spawn("npx", ["tsx", script!], {
+  const child = spawn(process.execPath, [join(toolRoot, "node_modules/tsx/dist/cli.mjs"), resolve(toolRoot, script!)], {
     stdio: "inherit",
     env: process.env,
   });

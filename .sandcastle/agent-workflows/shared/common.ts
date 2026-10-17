@@ -57,6 +57,7 @@ export const dotAgent = () => {
     ? JSON.parse(process.env.SANDCASTLE_DOT_STAGE).script
     : process.argv[1];
   return sandcastle.dot({
+    directory: process.env.SANDCASTLE_DOT_DIRECTORY,
     refs: script?.endsWith("/explore.ts")
       ? []
       : script?.endsWith("/update-branch.ts") && process.env.BASE_REF
