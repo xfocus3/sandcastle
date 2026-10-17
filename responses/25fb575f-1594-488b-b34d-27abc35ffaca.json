@@ -1,0 +1,11 @@
+{
+  "id": "25fb575f-1594-488b-b34d-27abc35ffaca",
+  "requestHash": "45d798038c6e2ef6eb01b19817f9a9beab96933c92f946b4d2914c387c6ac31b",
+  "runId": "39037476260",
+  "runAttempt": "1",
+  "head": "d1909ceed15d2f10dcb19bd7e01f21f006d779f6",
+  "resultHead": "d1909ceed15d2f10dcb19bd7e01f21f006d779f6",
+  "changedPaths": [],
+  "status": "completed",
+  "stdout": "<output>\n{\n  \"summary\": \"The two-file Basket fix is appropriately small: Map.merge accumulates repeated additions, and the regression tests the public behavior without introducing a new abstraction. No further code changes were needed.\\n\\nThe fixture revision passed [Java validation](https://github.com/xfocus3/sandcastle/actions/runs/39036230673). This review covers the fixture diff against its declared base, not the unrelated migration changes included by the generated comparison to main.\",\n  \"inlineComments\": [],\n  \"replies\": []\n}\n</output>"
+}
