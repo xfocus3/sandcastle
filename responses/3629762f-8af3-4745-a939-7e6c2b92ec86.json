@@ -1,0 +1,11 @@
+{
+  "id": "3629762f-8af3-4745-a939-7e6c2b92ec86",
+  "requestHash": "e2630de8f0a0b638277622dcb05e83037af87796bf61e9ece052a9113b4c2e44",
+  "runId": "39035630630",
+  "runAttempt": "1",
+  "head": "2527caffbb08a86e6464a119ccd1b703741c1992",
+  "resultHead": "2527caffbb08a86e6464a119ccd1b703741c1992",
+  "changedPaths": [],
+  "status": "completed",
+  "stdout": "<output>\n{\n  \"issues\": [\n    {\n      \"number\": 1,\n      \"tag\": \"easy-call\",\n      \"duplicate_of\": null,\n      \"comment\": \"easy-call: Basket.add overwrites previous quantities for the same item.\\n\\nThe change is limited to Basket.java and BasketTest.java in the controlled Maven fixture. No public signature or persisted format changes.\\n\\nTwo-way door: this localized behavior fix is easy to revert.\\n\\nVerified from source: add uses Map.put; quantityOf returns the stored quantity; the existing test covers only the first addition. Add a regression for additions of 2 and 3 yielding 5, observe the expected failure in Actions, then use Map.merge with Integer::sum and re-run. No new test seam or abstraction is needed.\\n\\nNo duplicate exists in this single-issue batch.\"\n    }\n  ],\n  \"patterns\": \"\"\n}\n</output>"
+}
