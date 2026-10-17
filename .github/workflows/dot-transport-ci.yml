@@ -25,7 +25,7 @@ jobs:
       - name: Validate external target workflows
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-          "$(go env GOPATH)/bin/actionlint" -shellcheck= .github/workflows/*-target.yml .github/workflows/sync-upstream.yml
+          "$(go env GOPATH)/bin/actionlint" -shellcheck= .github/workflows/*-target.yml .github/workflows/*-queue.yml .github/workflows/sync-upstream.yml
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
