@@ -30,6 +30,32 @@ const head = () =>
   execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const before = head();
 await import(`../../.sandcastle/agent-workflows/${stage}/${stage}.ts`);
+const after = head();
+if (stage === "implement") {
+  if (after === before)
+    throw new Error("Native implement returned without a code commit");
+  const paths = execFileSync("git", ["diff", "--name-only", before, after], {
+    encoding: "utf8",
+  })
+    .trim()
+    .split("\n");
+  if (
+    !paths.length ||
+    paths.some((path) => !path.startsWith("test-fixtures/dot-java/maven/"))
+  ) {
+    throw new Error(
+      "Native implement changed files outside its controlled Maven fixture",
+    );
+  }
+  if (
+    !paths.some((path) => path.includes("/src/test/")) ||
+    !paths.some((path) => path.includes("/src/main/"))
+  ) {
+    throw new Error(
+      "Native implement must return both the behavioral regression and its implementation",
+    );
+  }
+}
 writeFileSync(
   join(output, "receipt.json"),
   JSON.stringify(
@@ -39,7 +65,7 @@ writeFileSync(
       runId: process.env.GITHUB_RUN_ID,
       runAttempt: process.env.GITHUB_RUN_ATTEMPT,
       inputHead: before,
-      resultHead: head(),
+      resultHead: after,
       status: "stage_returned",
     },
     null,
