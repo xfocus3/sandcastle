@@ -33,7 +33,7 @@ Here are the last 10 commits:
 2. **Analyze for improvements**: Look for opportunities to:
    - Reduce unnecessary complexity and nesting
    - Eliminate redundant code and abstractions
-   - Improve readability through clear variable and function names
+   - Improve readability through clear variable and method names
    - Consolidate related logic
    - Remove unnecessary comments that describe obvious code
    - Avoid nested ternary operators - prefer switch statements or if/else chains
@@ -42,7 +42,7 @@ Here are the last 10 commits:
 3. **Maintain balance**: Avoid over-simplification that could:
    - Reduce code clarity or maintainability
    - Create overly clever solutions that are hard to understand
-   - Combine too many concerns into single functions or components
+   - Combine too many concerns into single methods or components
    - Remove helpful abstractions that improve code organization
    - Make the code harder to debug or extend
 
@@ -55,7 +55,7 @@ Here are the last 10 commits:
 If you find improvements to make:
 
 1. Make the changes directly on this branch
-2. Run `npm run typecheck` and `npm run test` to ensure nothing is broken
+2. Run the repository's Java compilation and test commands (e.g. `./mvnw test` or `./gradlew test`, using its configured JDK and wrapper/module/task equivalents) to ensure nothing is broken
 3. Commit with a message starting with `RALPH: Review -` describing the refinements
 
 If the code is already clean and well-structured, do nothing.

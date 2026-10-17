@@ -11,7 +11,7 @@ Do not include text outside the `<output>` block.
     { "commentId": "GraphQL node id from PR_COMMENTS_JSON", "body": "Markdown reply" }
   ],
   "newInlineComments": [
-    { "path": "relative/file.ts", "line": 123, "body": "Markdown comment" }
+    { "path": "relative/File.java", "line": 123, "body": "Markdown comment" }
   ],
   "topLevelComments": [
     { "body": "Markdown comment" }

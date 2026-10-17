@@ -19,7 +19,7 @@ Review the code changes on branch `{{BRANCH}}` and improve code clarity, consist
 2. **Analyze for improvements**: Look for opportunities to:
    - Reduce unnecessary complexity and nesting
    - Eliminate redundant code and abstractions
-   - Improve readability through clear variable and function names
+   - Improve readability through clear variable and method names
    - Consolidate related logic
    - Remove unnecessary comments that describe obvious code
    - Avoid nested ternary operators - prefer switch statements or if/else chains
@@ -28,13 +28,13 @@ Review the code changes on branch `{{BRANCH}}` and improve code clarity, consist
 3. **Check correctness**:
    - Does the implementation match the intent? Are edge cases handled?
    - Are new/changed behaviours covered by tests?
-   - Are there unsafe casts, `any` types, or unchecked assumptions?
+   - Are there unsafe casts, raw types, or unchecked assumptions?
    - Does the change introduce injection vulnerabilities, credential leaks, or other security issues?
 
 4. **Maintain balance**: Avoid over-simplification that could:
    - Reduce code clarity or maintainability
    - Create overly clever solutions that are hard to understand
-   - Combine too many concerns into single functions or components
+   - Combine too many concerns into single methods or components
    - Remove helpful abstractions that improve code organization
    - Make the code harder to debug or extend
 
@@ -47,7 +47,7 @@ Review the code changes on branch `{{BRANCH}}` and improve code clarity, consist
 If you find improvements to make:
 
 1. Make the changes directly on this branch
-2. Run tests and type checking to ensure nothing is broken
+2. Run tests and compilation to ensure nothing is broken
 3. Commit describing the refinements
 
 If the code is already clean and well-structured, do nothing.

@@ -35,7 +35,7 @@ If applicable, use RGR to complete the task.
 
 # FEEDBACK LOOPS
 
-Before committing, run `npm run typecheck` and `npm run test` to ensure the tests pass.
+Before committing, run the repository's Java compilation and test commands (e.g. `./mvnw test` or `./gradlew test`, using its configured JDK and wrapper/module/task equivalents) to ensure the tests pass.
 
 # COMMIT
 

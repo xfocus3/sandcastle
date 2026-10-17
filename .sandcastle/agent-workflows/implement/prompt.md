@@ -27,9 +27,9 @@ Where a test seam already exists, or a new one is being proposed, do red-green-r
 3. REPEAT until the issue is done
 4. REFACTOR
 
-Do not improvise new test seams, such as extracting out a function so that it can be tested in isolation. This creates spaghetti tests.
+Do not improvise new test seams, such as extracting out a method so that it can be tested in isolation. This creates spaghetti tests.
 
-Run `npm run typecheck` before committing. Run focused tests where relevant.
+Run the repository's Java compilation command (e.g. `./mvnw test-compile` or `./gradlew testClasses`, using its configured JDK and wrapper/module/task equivalents) before committing. Run focused tests where relevant.
 
 # COMMIT
 

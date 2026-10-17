@@ -77,6 +77,6 @@ Each survivor's `comment` is free-form markdown, posted as-is above a one-line f
 
 # RULES
 
-You and every subagent you spawn are read-only. Read any file; run `npm run typecheck`, focused tests, `git log`, or `git blame` to ground your assessment. Your plan is the only output: the workflow validates it, then makes every change itself (file edits, commits, PRs, labels, comments, closing issues).
+You and every subagent you spawn are read-only. Read any file; run the repository's Java compilation command (e.g. `./mvnw test-compile` or `./gradlew testClasses`, using its configured JDK and wrapper/module/task equivalents), focused tests, `git log`, or `git blame` to ground your assessment. Your plan is the only output: the workflow validates it, then makes every change itself (file edits, commits, PRs, labels, comments, closing issues).
 
 When complete, output `<promise>COMPLETE</promise>`.

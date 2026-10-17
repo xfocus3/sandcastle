@@ -9,7 +9,7 @@ Do not include text outside the `<output>` block.
 {
   "summary": "1-3 paragraphs explaining your review, including what you changed or why it was already clean.",
   "inlineComments": [
-    { "path": "relative/file.ts", "line": 123, "body": "Markdown comment" }
+    { "path": "relative/File.java", "line": 123, "body": "Markdown comment" }
   ],
   "replies": [
     { "commentId": "GraphQL node id from PR_COMMENTS_JSON", "body": "Markdown reply" }

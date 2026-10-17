@@ -7,15 +7,15 @@
 ## Style
 
 <!-- Example:
-- Use camelCase for variables and functions
+- Use camelCase for variables and methods
 - Use PascalCase for classes and types
-- Prefer named exports over default exports
+- Prefer explicit imports over wildcard imports
 -->
 
 ## Testing
 
 <!-- Example:
-- Every public function must have at least one test
+- Every public method must have at least one test
 - Use descriptive test names that explain the expected behavior
 -->
 

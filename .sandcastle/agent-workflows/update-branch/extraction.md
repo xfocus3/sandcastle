@@ -6,7 +6,7 @@ Emit a single block as the last thing in your response:
 
 <output>
 {
-  "comment": "Markdown body posted as a PR comment. Free-form prose. Describe which conflicts existed, how you resolved each, and flag any uncertainty or remaining problems (e.g. typecheck failures, ambiguous intent). Reference commit SHAs or file paths where useful."
+  "comment": "Markdown body posted as a PR comment. Free-form prose. Describe which conflicts existed, how you resolved each, and flag any uncertainty or remaining problems (e.g. compilation failures, ambiguous intent). Reference commit SHAs or file paths where useful."
 }
 </output>
 
