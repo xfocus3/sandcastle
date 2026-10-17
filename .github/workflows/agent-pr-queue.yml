@@ -1,0 +1,82 @@
+name: Agent PR Queue
+on:
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        required: true
+      pr_number:
+        type: number
+        default: 0
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  queue:
+    runs-on: ubuntu-latest
+    outputs:
+      prs: ${{ steps.queue.outputs.prs }}
+      count: ${{ steps.queue.outputs.count }}
+    steps:
+      - id: queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          MODE: ${{ inputs.mode }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          case "$MODE" in
+            review|update-branch) label="agent:$MODE" ;;
+            implement-pr) label=agent:implement ;;
+            *) exit 1 ;;
+          esac
+          prs=$(gh pr list --state open --label "$label" --limit 100 --json number,headRefName,headRefOid,baseRefName,isCrossRepository)
+          prs=$(jq --argjson n "$PR_NUMBER" '[.[] | select(.isCrossRepository == false and ($n == 0 or .number == $n))]' <<< "$prs")
+          echo "prs=$(jq -c . <<< "$prs")" >> "$GITHUB_OUTPUT"
+          echo "count=$(jq length <<< "$prs")" >> "$GITHUB_OUTPUT"
+  review:
+    needs: queue
+    if: needs.queue.outputs.count != '0' && inputs.mode == 'review'
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.queue.outputs.prs) }}
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@9622ea00ca6824433aeea21d2d709ef14776e5e8
+    with:
+      pr_number: ${{ matrix.pr.number }}
+      branch: ${{ matrix.pr.headRefName }}
+      head_sha: ${{ matrix.pr.headRefOid }}
+      base_ref: ${{ matrix.pr.baseRefName }}
+      tool_ref: 9622ea00ca6824433aeea21d2d709ef14776e5e8
+  implement-pr:
+    needs: queue
+    if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.queue.outputs.prs) }}
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@9622ea00ca6824433aeea21d2d709ef14776e5e8
+    with:
+      pr_number: ${{ matrix.pr.number }}
+      branch: ${{ matrix.pr.headRefName }}
+      head_sha: ${{ matrix.pr.headRefOid }}
+      base_ref: ${{ matrix.pr.baseRefName }}
+      tool_ref: 9622ea00ca6824433aeea21d2d709ef14776e5e8
+  update-branch:
+    needs: queue
+    if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.queue.outputs.prs) }}
+    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@9622ea00ca6824433aeea21d2d709ef14776e5e8
+    with:
+      pr_number: ${{ matrix.pr.number }}
+      branch: ${{ matrix.pr.headRefName }}
+      head_sha: ${{ matrix.pr.headRefOid }}
+      base_ref: ${{ matrix.pr.baseRefName }}
+      tool_ref: 9622ea00ca6824433aeea21d2d709ef14776e5e8
