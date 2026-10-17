@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "repository": "xfocus3/sandcastle",
+  "implementationHead": "e571a250e19f8bd4b46e1dcdcf66194d0c66b09d",
+  "status": "partial-e2e-verification",
+  "checks": [
+    {
+      "name": "transport-and-recovery-unit-suite",
+      "runId": 39035484589,
+      "result": "passed"
+    },
+    {
+      "name": "native-implementation-live-handoff",
+      "runId": 39033821951,
+      "result": "passed",
+      "context": "controlled synthetic issue fallback",
+      "resultHead": "d0a9e5e72ec0b431997d218bba1714c61fb75b98"
+    },
+    {
+      "name": "behavioral-red",
+      "runId": 39034201404,
+      "result": "expected-assertion-failure",
+      "tests": 2,
+      "failures": 1
+    },
+    {
+      "name": "behavioral-green",
+      "runId": 39034360595,
+      "result": "passed",
+      "tests": 2,
+      "skipped": 0
+    },
+    {
+      "name": "exploration-and-structured-extraction",
+      "runId": 39035630630,
+      "result": "passed"
+    },
+    {
+      "name": "runner-loss-pending-stage-recovery",
+      "expiredRunId": 39035656301,
+      "runId": 39036073170,
+      "result": "passed",
+      "resultHead": "f2ac59eec8b68ed9513f3cd2f03780831e4b53ab"
+    },
+    {
+      "name": "recovered-head-java-validation",
+      "runId": 39036187874,
+      "result": "passed"
+    },
+    {
+      "name": "completed-exchange-replay",
+      "result": "not-run"
+    },
+    {
+      "name": "review",
+      "result": "not-run"
+    },
+    {
+      "name": "pr-feedback",
+      "result": "not-run"
+    },
+    {
+      "name": "update-branch",
+      "result": "not-run"
+    },
+    {
+      "name": "local-loop-paths",
+      "result": "not-run"
+    },
+    {
+      "name": "default-branch-label-triggers",
+      "result": "not-activated"
+    }
+  ],
+  "next": "Obtain approval for the controlled draft test PR, then exercise review/feedback/update stages. Continue recovery replay and local-loop coverage. Do not equate controlled stage tests with live label-trigger verification.",
+  "testIssue": "https://github.com/xfocus3/sandcastle/issues/1",
+  "testPR": null,
+  "autoMerge": false
+}
