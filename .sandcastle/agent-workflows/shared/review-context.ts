@@ -41,12 +41,12 @@ export const fetchPullRequestContext = (
     /(?:closes|fixes|resolves)\s+#(\d+)/i,
   );
   const issueNumber = issueMatch?.[1] ?? "";
-  const issueTitle = issueNumber
-    ? safeSh(`gh issue view ${issueNumber} --json title --jq .title`).trim()
-    : "";
   const linkedIssue = issueNumber
-    ? safeSh(`gh issue view ${issueNumber} --comments`)
+    ? gh(["issue", "view", issueNumber, "--json", "title,body,comments"])
     : "(no linked issue found)";
+  const issueTitle = issueNumber
+    ? (JSON.parse(linkedIssue) as { title: string }).title
+    : "";
 
   const reviews = JSON.parse(
     gh(["api", `repos/{owner}/{repo}/pulls/${prNumber}/reviews`]),
