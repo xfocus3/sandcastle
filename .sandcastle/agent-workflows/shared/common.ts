@@ -52,7 +52,14 @@ export const writeText = (filename: string, value: string): void => {
   fs.writeFileSync(path.join(outputDir(), filename), value);
 };
 
-export const dotAgent = () => sandcastle.dot();
+export const dotAgent = () =>
+  sandcastle.dot({
+    refs: (process.env.SANDCASTLE_DOT_STAGE
+      ? JSON.parse(process.env.SANDCASTLE_DOT_STAGE).script
+      : process.argv[1])?.endsWith("/update-branch.ts") && process.env.BASE_REF
+      ? [`origin/${process.env.BASE_REF}`]
+      : ["main", ...(process.env.BASE_REF ? [`origin/${process.env.BASE_REF}`] : [])],
+  });
 
 export const standardSchema = <T>(
   validate: (value: unknown) => T,

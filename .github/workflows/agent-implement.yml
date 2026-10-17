@@ -150,7 +150,7 @@ jobs:
           script: |
             const { spawn } = require('node:child_process');
             await new Promise((resolve, reject) => {
-              const child = spawn('npx', ['tsx', '.sandcastle/agent-workflows/implement/implement.ts'], { stdio: 'inherit', env: process.env });
+              const child = spawn('npx', ['tsx', 'scripts/dot/stage.ts', '.sandcastle/agent-workflows/implement/implement.ts'], { stdio: 'inherit', env: process.env });
               child.on('error', reject);
               child.on('close', code => code === 0 ? resolve() : reject(new Error('Agent stage exited with code ' + code)));
             });

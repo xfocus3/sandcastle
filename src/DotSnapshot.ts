@@ -129,7 +129,7 @@ export async function applyDotCommit(
     ...(snapshot.merge.MERGE_HEAD?.trim().split(/\s+/) ?? []),
   ];
   const commands = [
-    `git fetch origin ${head}`,
+    `git -c credential.helper= -c credential.helper='!f() { if [ "$1" = get ]; then printf "username=x-access-token\\npassword=%s\\n" "\${GH_TOKEN:-$GITHUB_TOKEN}"; fi; }; f' fetch origin ${head}`,
     ...parents.map(
       (parent) => `git merge-base --is-ancestor ${quote(parent)} ${head}`,
     ),

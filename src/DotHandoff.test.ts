@@ -166,6 +166,80 @@ describe("dot handoff", () => {
     }
   });
 
+  it("replays a completed exchange after mailbox loss without asking dot twice", async () => {
+    const { root, context } = fixture();
+    let request!: DotRequest;
+    const first = dot({
+      repository: "fixture/repo",
+      directory: join(root, "lost"),
+      exchange: async (value) => {
+        request = value;
+        return answer(value);
+      },
+    });
+    const original = await first.invoke!(context);
+    rmSync(join(root, "lost"), { recursive: true });
+    const resumed = dot({
+      repository: "fixture/repo",
+      directory: join(root, "restored"),
+      replay: [{ request, response: answer(request) }],
+      exchange: async () => {
+        throw new Error("must not repeat completed exchange");
+      },
+    });
+    const result = await resumed.invoke!(context);
+    expect(result).toEqual(original);
+  });
+
+  it("reissues an unfinished exchange with a new request identity after expiry", async () => {
+    const { root, context } = fixture();
+    let request!: DotRequest;
+    const first = dot({
+      repository: "fixture/repo",
+      directory: join(root, "lost"),
+      exchange: async (value) => {
+        request = value;
+        throw new Error("runner lost");
+      },
+    });
+    await expect(first.invoke!(context)).rejects.toThrow("runner lost");
+    let next!: DotRequest;
+    const resumed = dot({
+      repository: "fixture/repo",
+      directory: join(root, "new"),
+      replay: [{ request }],
+      exchange: async (value) => {
+        next = value;
+        return answer(value);
+      },
+    });
+    await resumed.invoke!(context);
+    expect(next.id).not.toBe(request.id);
+    expect(next.snapshot.head).toBe(request.snapshot.head);
+  });
+
+  it("blocks replay when the original prompt or workspace no longer matches", async () => {
+    const { root, context } = fixture();
+    let request!: DotRequest;
+    await dot({
+      repository: "fixture/repo",
+      directory: join(root, "first"),
+      exchange: async (value) => {
+        request = value;
+        return answer(value);
+      },
+    }).invoke!(context);
+    const resumed = dot({
+      repository: "fixture/repo",
+      directory: join(root, "new"),
+      replay: [{ request, response: answer(request) }],
+      exchange: async (value) => answer(value),
+    });
+    await expect(
+      resumed.invoke!({ ...context, prompt: "Different instructions" }),
+    ).rejects.toThrow("Recovery boundary changed");
+  });
+
   it("refuses to apply a response after the worktree changes", async () => {
     const { root, repo, context } = fixture();
     const provider = dot({

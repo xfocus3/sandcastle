@@ -1,6 +1,6 @@
 {
   "stage": "implement",
-  "issueNumber": 999001,
+  "issueNumber": 1,
   "issueTitle": "Controlled fixture: Basket repeated additions of the same item must accumulate quantities (add 2 then 3 yields 5). Scope test-fixtures/dot-java/maven; use Actions for RED/GREEN checks.",
   "prNumber": 999001,
   "baseRef": "main"

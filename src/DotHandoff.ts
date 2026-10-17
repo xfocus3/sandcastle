@@ -7,6 +7,7 @@ import type { AgentInvocation, AgentProvider } from "./AgentProvider.js";
 import {
   applyDotCommit,
   captureDotSnapshot,
+  snapshotIdentity,
   type DotSnapshot,
 } from "./DotSnapshot.js";
 
@@ -16,6 +17,7 @@ export interface DotRequest {
   repository: string;
   runId: string;
   runAttempt: string;
+  controllerHead?: string;
   prompt: string;
   resumeSession?: string;
   forkSession: boolean;
@@ -23,6 +25,7 @@ export interface DotRequest {
   expiresAt: string;
   snapshot: DotSnapshot;
   hash: string;
+  stage?: { id: string; inputHash: string; script: string };
 }
 
 export interface DotResponse {
@@ -37,6 +40,54 @@ export interface DotResponse {
   stdout: string;
 }
 
+export interface DotExchange {
+  request: DotRequest;
+  response?: DotResponse;
+}
+
+interface ReplayState {
+  entries: readonly DotExchange[];
+  cursor: number;
+}
+const replayFiles = new Map<string, Promise<ReplayState>>();
+async function replayFile(file: string): Promise<ReplayState> {
+  let state = replayFiles.get(file);
+  if (!state) {
+    state = readFile(file, "utf8").then((text) => {
+      const value = JSON.parse(text);
+      if (
+        !Array.isArray(value) ||
+        value.some(
+          (entry, index) =>
+            !entry?.request || (!entry.response && index !== value.length - 1),
+        )
+      )
+        throw new Error("Invalid dot replay journal");
+      return { entries: value, cursor: 0 };
+    });
+    replayFiles.set(file, state);
+  }
+  return state;
+}
+
+function replayMatches(previous: DotRequest, current: DotRequest): boolean {
+  const { hash, ...unsigned } = previous;
+  if (
+    createHash("sha256").update(JSON.stringify(unsigned)).digest("hex") !== hash
+  ) {
+    throw new Error("Recovery request hash mismatch");
+  }
+  return (
+    previous.repository === current.repository &&
+    previous.prompt === current.prompt &&
+    previous.resumeSession === current.resumeSession &&
+    previous.forkSession === current.forkSession &&
+    JSON.stringify(previous.stage ?? null) ===
+      JSON.stringify(current.stage ?? null) &&
+    snapshotIdentity(previous.snapshot) === snapshotIdentity(current.snapshot)
+  );
+}
+
 export interface DotOptions {
   /** Same GitHub repository as the worktree. Defaults to GITHUB_REPOSITORY or the GitHub origin. */
   repository?: string;
@@ -48,6 +99,8 @@ export interface DotOptions {
   refs?: readonly string[];
   /** Hard wait bound, at most 45 minutes; expiry is an error, never completion. */
   timeoutSeconds?: number;
+  /** Completed exchanges replay only at the exact original prompt/worktree boundary. */
+  replay?: readonly DotExchange[];
   /** Transport seam for a coordinator or deterministic protocol tests. */
   exchange?: (request: DotRequest, signal: AbortSignal) => Promise<DotResponse>;
 }
@@ -206,6 +259,10 @@ async function waitForResponse(
 /** A mailbox transport, not an API/model client. Existing Sandcastle stages remain in charge. */
 export function dot(options: DotOptions = {}): AgentProvider {
   const directory = resolve(options.directory ?? ".sandcastle/dot");
+  const replay: ReplayState | undefined = options.replay
+    ? { entries: options.replay, cursor: 0 }
+    : undefined;
+  const journal: DotExchange[] = [];
   const timeoutSeconds = options.timeoutSeconds ?? 45 * 60;
   if (
     !Number.isFinite(timeoutSeconds) ||
@@ -280,7 +337,7 @@ export function dot(options: DotOptions = {}): AgentProvider {
       if (!repository || !/^[\w.-]+\/[\w.-]+$/.test(repository))
         throw new Error("Set the dot repository to owner/repo");
       const id = randomUUID();
-      const sessionId =
+      let sessionId =
         context.resumeSession && !context.forkSession
           ? context.resumeSession
           : randomUUID();
@@ -299,27 +356,66 @@ export function dot(options: DotOptions = {}): AgentProvider {
         repository,
         runId: process.env.GITHUB_RUN_ID ?? "local",
         runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
+        ...(process.env.GITHUB_SHA
+          ? { controllerHead: process.env.GITHUB_SHA }
+          : {}),
         prompt,
         resumeSession: context.resumeSession,
         forkSession: context.forkSession ?? false,
         sessionId,
         expiresAt: new Date(Date.now() + timeoutSeconds * 1000).toISOString(),
+        ...(process.env.SANDCASTLE_DOT_STAGE
+          ? { stage: JSON.parse(process.env.SANDCASTLE_DOT_STAGE) }
+          : {}),
         snapshot: await withAbort(
           captureDotSnapshot({ ...context, signal }, options.refs),
           signal,
         ),
       };
-      const request: DotRequest = {
+      let request: DotRequest = {
         ...unsigned,
         hash: createHash("sha256")
           .update(JSON.stringify(unsigned))
           .digest("hex"),
       };
-      const requestDirectory = join(directory, id);
+      const state =
+        replay ??
+        (process.env.SANDCASTLE_DOT_REPLAY_FILE
+          ? await replayFile(process.env.SANDCASTLE_DOT_REPLAY_FILE)
+          : undefined);
+      const previous = state?.entries[state.cursor];
+      let recovered: DotResponse | undefined;
+      if (previous) {
+        if (!replayMatches(previous.request, request)) {
+          throw new Error(
+            "Recovery boundary changed; reconcile the stage before replay",
+          );
+        }
+        state!.cursor++;
+        if (process.env.SANDCASTLE_DOT_REPLAY_FILE) {
+          await writeFile(
+            `${process.env.SANDCASTLE_DOT_REPLAY_FILE}.used`,
+            String(state!.cursor),
+          );
+        }
+        if (previous.response) {
+          request = previous.request;
+          sessionId = request.sessionId;
+          recovered = validateDotResponse(request, previous.response);
+        }
+      }
+      const requestDirectory = join(directory, request.id);
       await mkdir(requestDirectory, { recursive: true });
       const requestFile = join(requestDirectory, "request.json");
       await writeFile(requestFile, JSON.stringify(request, null, 2));
-      if (process.env.GITHUB_ACTIONS === "true" && !options.exchange) {
+      journal.push({ request });
+      const journalFile = join(directory, "journal.json");
+      await writeFile(journalFile, JSON.stringify(journal, null, 2));
+      if (
+        !recovered &&
+        process.env.GITHUB_ACTIONS === "true" &&
+        !options.exchange
+      ) {
         const { DefaultArtifactClient } = await import("@actions/artifact");
         const { id: artifactId } = await withAbort(
           new DefaultArtifactClient().uploadArtifact(
@@ -334,26 +430,27 @@ export function dot(options: DotOptions = {}): AgentProvider {
         console.log(
           `Awaiting dot: request ${id}, artifact ${artifactId}. The agent has not completed.`,
         );
-      } else
+      } else if (!recovered)
         console.log(
           `Awaiting dot: request ${id}. The agent has not completed.`,
         );
       try {
         const response = validateDotResponse(
           request,
-          await withAbort(
-            options.exchange
-              ? options.exchange(request, signal)
-              : waitForResponse(
-                  request,
-                  directory,
-                  options.responseRef ??
-                    process.env.SANDCASTLE_DOT_RESPONSE_REF ??
-                    "sandcastle-dot-responses",
-                  signal,
-                ),
-            signal,
-          ),
+          recovered ??
+            (await withAbort(
+              options.exchange
+                ? options.exchange(request, signal)
+                : waitForResponse(
+                    request,
+                    directory,
+                    options.responseRef ??
+                      process.env.SANDCASTLE_DOT_RESPONSE_REF ??
+                      "sandcastle-dot-responses",
+                    signal,
+                  ),
+              signal,
+            )),
         );
         signal.throwIfAborted();
         await withAbort(
@@ -370,13 +467,15 @@ export function dot(options: DotOptions = {}): AgentProvider {
           join(requestDirectory, "response.json"),
           JSON.stringify(response, null, 2),
         );
+        journal[journal.length - 1]!.response = response;
+        await writeFile(journalFile, JSON.stringify(journal, null, 2));
         await mkdir(join(directory, "sessions"), { recursive: true });
         await writeFile(
           sessionPath(sessionId),
           JSON.stringify({
             sessionId,
             parent: context.resumeSession,
-            requestId: id,
+            requestId: request.id,
             requestHash: request.hash,
           }),
         );

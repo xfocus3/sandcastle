@@ -1,7 +1,7 @@
 // Controlled integration harness. The production stage scripts remain unchanged.
 // Publishing PRs, reviews, labels and target merges is deliberately outside this test.
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { resolve, join } from "node:path";
 
 const context = JSON.parse(
@@ -29,7 +29,23 @@ Object.assign(process.env, {
 const head = () =>
   execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const before = head();
-await import(`../../.sandcastle/agent-workflows/${stage}/${stage}.ts`);
+await new Promise<void>((done, fail) => {
+  const child = spawn(
+    "npx",
+    [
+      "tsx",
+      "scripts/dot/stage.ts",
+      `.sandcastle/agent-workflows/${stage}/${stage}.ts`,
+    ],
+    { stdio: "inherit", env: process.env },
+  );
+  child.on("error", fail);
+  child.on("close", (code) =>
+    code === 0
+      ? done()
+      : fail(new Error(`Original stage exited with code ${code}`)),
+  );
+});
 const after = head();
 if (stage === "implement") {
   if (after === before)

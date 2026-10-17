@@ -33,7 +33,10 @@ try {
   for (const line of snapshot.refs.split("\n").filter(Boolean)) {
     const [sha, ref] = line.split(" ");
     if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("Invalid snapshot ref");
-    if (ref.startsWith("refs/heads/")) {
+    if (
+      ref.startsWith("refs/heads/") ||
+      ref.startsWith("refs/remotes/origin/")
+    ) {
       git(["check-ref-format", ref]);
       git(["update-ref", ref, sha]);
     }

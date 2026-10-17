@@ -6,9 +6,10 @@ review, extraction, retry, merge or publication logic.
 
 ## This checkpoint
 
-The provider core passed Actions run 39032731103 at commit
-`f07639196203943400fac3e163e1c4a30b59e449`: 55 test files, 1460 passed,
-2 existing skipped tests. All five agent entrypoints and the local templates now
+The wired transport passed Actions run 39033582684 at commit
+`e82b109325eeb6b3af0a3af8d717b6ae53b3a113`: 55 test files, 1480 passed,
+2 existing skipped tests. Java baseline run 39033599836 executed one Maven and
+one Gradle JUnit test, each passing with no skips. All five agent entrypoints and the local templates now
 use dot; JavaScript action steps supply the artifact runtime context.
 Live Actions artifact exchange, native-worker execution,
 mid-cycle Java checks and expired-runner recovery are **not yet verified**.
@@ -79,11 +80,35 @@ authorized repository for recovery.
 
 ## Recovery boundary
 
-An active runner can continue after the coordinator reconnects. An expired runner
-cannot resume its JavaScript stack. This checkpoint does **not** implement safe
-expired-runner stage replay. A later resume wrapper must restore a recorded
-stage boundary and reconcile already-published branch/PR/review effects before
-continuing. Blind reruns of the original workflows are unsafe.
+An active runner can continue after the coordinator reconnects. Its request and
+response identities remain unchanged; inspect the actual run before responding.
+
+The five agent stages now enter through `scripts/dot/stage.ts`. It records the
+pre-stage Git snapshot, whitelisted project inputs and immutable exploration
+batch in an immediate `dot-stage-input-<id>` artifact. Provider requests include
+that stage identity, and `.sandcastle/dot/journal.json` records exchanges. The
+coordinator must copy the sanitized stage input and request/response chain into
+the authorized repository before those artifacts expire.
+
+For a lost runner, save `.sandcastle/recovery/resume.json` on a controlled
+`sandcastle/dot-resume/**` branch with `stage` (the original input), `exchanges`
+(the ordered request/response records; only the final response may be missing),
+and `lease: { ref, head }` for the original task branch. The read-only recovery
+workflow first checks the old run is terminal, its attempt/controller SHA still
+match, and the task branch has not advanced. It then restores the clean stage
+entry, executes the same original script and replays completed provider calls
+only when the exact expanded prompt, Git/ref/index/worktree state and logical
+session match. The first unfinished call creates a fresh run-bound request;
+an old response cannot satisfy it. An unused journal entry or changed context
+blocks recovery. No push, PR, review, label or target merge is replayed by this
+workflow. The coordinator must reconcile those effects separately before any
+authorized publication.
+
+This is stage-boundary replay, not resumption of a JavaScript stack. The core
+restart regressions and real expired-runner workflow still need Actions
+verification. The original local multi-round planner loops are not yet wrapped
+for expired-process replay: generated branch names and concurrent scheduling
+need stable entry records. Do not claim automatic recovery for those paths.
 
 ## Response shape
 
