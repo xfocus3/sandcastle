@@ -1,0 +1,14 @@
+{
+  "id": "f8246940-89ef-4780-895e-3579aafad777",
+  "requestHash": "5ec167086ae4f02bcd9b12a1b20b0c6321999ec4b85395c31124bbef5fdd2a8c",
+  "runId": "39036073170",
+  "runAttempt": "1",
+  "head": "8cc8053574e5f70a7d831324ba7bdbd7c33d446b",
+  "resultHead": "f2ac59eec8b68ed9513f3cd2f03780831e4b53ab",
+  "changedPaths": [
+    "test-fixtures/dot-java/maven/src/main/java/example/Basket.java",
+    "test-fixtures/dot-java/maven/src/test/java/example/BasketTest.java"
+  ],
+  "status": "completed",
+  "stdout": "Recovered the pending implementation at its original stage boundary. Reused the verified regression and minimal Map.merge fix after re-reading the unchanged fixture source. Prior RED run 39034201404 established expected 5 versus actual 3 on the same baseline fixture source and identical regression; exact recovered result f2ac59eec8b68ed9513f3cd2f03780831e4b53ab passed Java validation run 39036187874. No additional abstractions, no local test execution, and no PR/label/merge actions performed. <promise>COMPLETE</promise>"
+}
