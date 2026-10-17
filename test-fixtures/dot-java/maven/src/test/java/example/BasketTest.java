@@ -23,4 +23,11 @@ class BasketTest {
 
         assertEquals(5, basket.quantityOf("coffee"));
     }
+
+    @Test
+    void returnsZeroForMissingItem() {
+        Basket basket = new Basket();
+
+        assertEquals(0, basket.quantityOf("missing"));
+    }
 }
