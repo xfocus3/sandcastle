@@ -7,7 +7,7 @@ public final class Basket {
     private final Map<String, Integer> quantities = new HashMap<>();
 
     public void add(String item, int quantity) {
-        quantities.put(item, quantity);
+        quantities.merge(item, quantity, Integer::sum);
     }
 
     public int quantityOf(String item) {
