@@ -1,0 +1,14 @@
+{
+  "id": "0cdfaecb-dfc1-4cec-bce7-fabf3237970c",
+  "requestHash": "7ebbd665029e32bd5e77d3d7bb7309a08af88b17864097a560c2be0cad3f88be",
+  "runId": "39040673950",
+  "runAttempt": "1",
+  "head": "8a0c8e39c502a1d01bc83029862f8de7ad1e4e58",
+  "resultHead": "72ea7331bf321af9b9e97141ee24de20582c28b5",
+  "changedPaths": [
+    "test-fixtures/dot-java/gradle/src/main/java/example/checkout/Checkout.java",
+    "test-fixtures/dot-java/gradle/src/test/java/example/checkout/CheckoutTest.java"
+  ],
+  "status": "completed",
+  "stdout": "Implemented issue #3 with one exact-threshold regression and the minimum > to >= fix. Read the fixture requirement and project context. RED in Actions run 39040802777 at 612b23ef75c408e73c0b6e17db6957d785286344: 2 Gradle tests, 1 intended assertion failure, expected 9000 actual 10000, 0 errors/skips. GREEN at 72ea7331bf321af9b9e97141ee24de20582c28b5 in Actions run 39040965940; Gradle and Maven jobs passed. Changes limited to the two Gradle fixture files, no extra abstraction or refactor needed. No database tests apply; no separate formatter configured. Builds and tests ran in Actions only. Workflow owns the final task branch push and draft PR creation. <promise>COMPLETE</promise>"
+}
