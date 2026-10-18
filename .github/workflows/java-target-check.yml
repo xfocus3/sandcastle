@@ -103,11 +103,14 @@ jobs:
       - name: Capture tested source after formatter hooks
         if: always()
         working-directory: target
+        env:
+          PATCH_REF: ${{ inputs.patch_ref }}
         run: |
           set -euo pipefail
           git diff --binary HEAD > ../verified.patch
           git add -u
           printf 'tested_tree=%s\n' "$(git write-tree)" >> ../verification.txt
+          if [ -z "$PATCH_REF" ]; then git diff --exit-code HEAD; fi
       - name: Save exact-revision verification reports
         if: always()
         uses: actions/upload-artifact@v4

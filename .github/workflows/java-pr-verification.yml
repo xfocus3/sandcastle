@@ -1,0 +1,67 @@
+name: Scoped Java PR verification
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        type: string
+        required: true
+      pr_number:
+        type: number
+        required: true
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      arguments: ${{ steps.plan.outputs.arguments }}
+      build_tool: ${{ steps.plan.outputs.build_tool }}
+      java_version: ${{ steps.plan.outputs.java_version }}
+      database: ${{ steps.plan.outputs.database }}
+      setup_script: ${{ steps.plan.outputs.setup_script }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: plan
+        uses: actions/github-script@v7
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const head = process.env.TARGET_SHA;
+            const number = Number(process.env.PR_NUMBER);
+            if (!/^[a-f0-9]{40}$/.test(head) || !Number.isSafeInteger(number) || number <= 0) throw new Error('Invalid exact PR target');
+            const {data: pr} = await github.rest.pulls.get({...context.repo, pull_number:number});
+            if (pr.state !== 'open' || pr.head.repo.full_name !== context.repo.owner+'/'+context.repo.repo || pr.head.sha !== head) throw new Error('PR changed or is external');
+            const plan = JSON.parse(fs.readFileSync('.sandcastle/verification-plans/'+number+'.json','utf8'));
+            if (!['gradle','maven'].includes(plan.build_tool) || !Array.isArray(plan.arguments) || !plan.arguments.length || !plan.arguments.every(x=>typeof x === 'string' && !x.includes('\n'))) throw new Error('Invalid focused check plan');
+            if (typeof plan.reason !== 'string' || !plan.reason.trim()) throw new Error('Explain the test scope');
+            core.setOutput('arguments', JSON.stringify(plan.arguments));
+            for (const [key, fallback] of Object.entries({build_tool:'gradle',java_version:'25',database:'h2',setup_script:''})) core.setOutput(key,String(plan[key] ?? fallback));
+            await core.summary.addHeading('Focused verification').addRaw(plan.reason).addRaw('\nSource: '+head).write();
+  verify:
+    needs: plan
+    uses: xfocus3/sandcastle/.github/workflows/java-target-check.yml@49c6d695a59a46f3e693555ffe949ea1f0959748
+    with:
+      target_sha: ${{ inputs.target_sha }}
+      arguments: ${{ needs.plan.outputs.arguments }}
+      build_tool: ${{ needs.plan.outputs.build_tool }}
+      java_version: ${{ needs.plan.outputs.java_version }}
+      database: ${{ needs.plan.outputs.database }}
+      setup_script: ${{ needs.plan.outputs.setup_script }}
+  current-head:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const {data: pr} = await github.rest.pulls.get({...context.repo,pull_number:Number(process.env.PR_NUMBER)});
+            if (pr.state !== 'open' || pr.head.sha !== process.env.TARGET_SHA) throw new Error('PR advanced during checks; verify the new head');
