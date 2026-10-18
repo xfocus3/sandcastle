@@ -14,8 +14,8 @@ on:
 permissions:
   contents: read
   actions: write
-  issues: write
-  pull-requests: read
+  issues: read
+  pull-requests: write
 concurrency:
   group: sandcastle-verification-dispatch
   cancel-in-progress: false
