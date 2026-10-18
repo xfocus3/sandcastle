@@ -17,6 +17,9 @@ on:
       verification_workflows:
         type: string
         default: '[]'
+      review_exception:
+        type: string
+        default: 'null'
       tool_ref:
         type: string
         required: true
@@ -35,6 +38,7 @@ jobs:
       pull-requests: write
 
     env:
+      REVIEW_EXCEPTION: ${{ inputs.review_exception }}
       VERIFICATION_WORKFLOWS: ${{ inputs.verification_workflows }}
       BASE_REF: ${{ inputs.base_ref }}
       PR_NUMBER: ${{ inputs.pr_number }}
@@ -84,8 +88,8 @@ jobs:
           ref: ${{ inputs.tool_ref }}
           path: sandcastle-tool
           persist-credentials: false
-      - name: Require passing checks before review
-        run: node ../sandcastle-tool/scripts/dot/verification.mjs "$BRANCH_HEAD_SHA" "$VERIFICATION_WORKFLOWS"
+      - name: Require verified checks or documented draft-review exception
+        run: node ../sandcastle-tool/scripts/dot/verification.mjs "$BRANCH_HEAD_SHA" "$VERIFICATION_WORKFLOWS" "$REVIEW_EXCEPTION"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -98,6 +102,12 @@ jobs:
       - name: Build
         working-directory: sandcastle-tool
         run: npm run build
+
+      - name: Recheck review head and verification
+        run: |
+          set -euo pipefail
+          test "$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)" = "$BRANCH_HEAD_SHA"
+          node ../sandcastle-tool/scripts/dot/verification.mjs "$BRANCH_HEAD_SHA" "$VERIFICATION_WORKFLOWS" "$REVIEW_EXCEPTION"
 
       - name: Run review agent
         env:
@@ -143,8 +153,8 @@ jobs:
           remote_head=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
           test "$head" = "$remote_head"
           if ! node ../sandcastle-tool/scripts/dot/verification.mjs "$head" "$VERIFICATION_WORKFLOWS"; then
-            gh pr edit "$PR_NUMBER" --add-label "agent:review"
-            echo "Keeping draft status until the reviewed head passes verification."
+            gh pr ready "$PR_NUMBER" --undo 2>/dev/null || test "$(gh pr view "$PR_NUMBER" --json isDraft --jq .isDraft)" = true
+            echo "Review complete; keeping draft status until the reviewed head passes verification." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           gh pr ready "$PR_NUMBER"
