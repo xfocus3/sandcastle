@@ -7,10 +7,16 @@ on:
         required: true
       patch_ref:
         type: string
-        required: true
+        default: ''
       patch_path:
         type: string
-        required: true
+        default: ''
+      setup_script:
+        type: string
+        default: ''
+      database:
+        type: string
+        default: ''
       java_version:
         type: string
         default: '25'
@@ -33,6 +39,7 @@ jobs:
           path: target
           persist-credentials: false
       - uses: actions/checkout@v4
+        if: inputs.patch_ref != ''
         with:
           ref: ${{ inputs.patch_ref }}
           path: request
@@ -42,7 +49,7 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java_version }}
       - uses: gradle/actions/setup-gradle@v4
-      - name: Apply prepared patch
+      - name: Verify exact source and apply optional patch
         working-directory: target
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
@@ -51,13 +58,27 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$PATCH_REF" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$PATCH_PATH" =~ ^patches/[A-Za-z0-9._/-]+\.patch$ ]]
-          [[ "$PATCH_PATH" != *..* ]]
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          git apply --check "../request/$PATCH_PATH"
-          git apply --index "../request/$PATCH_PATH"
+          if [ -n "$PATCH_REF" ] || [ -n "$PATCH_PATH" ]; then
+            [[ "$PATCH_REF" =~ ^[0-9a-f]{40}$ ]]
+            [[ "$PATCH_PATH" =~ ^patches/[A-Za-z0-9._/-]+\.patch$ ]]
+            [[ "$PATCH_PATH" != *..* ]]
+            git apply --check "../request/$PATCH_PATH"
+            git apply --index "../request/$PATCH_PATH"
+          fi
           printf 'base=%s\npatch_commit=%s\ntree=%s\n' "$TARGET_SHA" "$PATCH_REF" "$(git write-tree)" > ../verification.txt
+      - name: Prepare project test services
+        if: inputs.setup_script != ''
+        working-directory: target
+        env:
+          SETUP_SCRIPT: ${{ inputs.setup_script }}
+          RDBMS: ${{ inputs.database }}
+        run: |
+          set -euo pipefail
+          [[ "$SETUP_SCRIPT" =~ ^[A-Za-z0-9_./-]+\.sh$ ]]
+          [[ "$SETUP_SCRIPT" != /* && "$SETUP_SCRIPT" != *..* ]]
+          test -f "$SETUP_SCRIPT"
+          bash "$SETUP_SCRIPT"
       - name: Run Java checks
         working-directory: target
         env:
