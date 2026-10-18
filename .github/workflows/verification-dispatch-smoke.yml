@@ -1,0 +1,18 @@
+name: Verification dispatcher smoke
+on:
+  push:
+    branches: [feat/java-agent-workflows]
+permissions:
+  contents: read
+  actions: write
+  issues: write
+  pull-requests: read
+jobs:
+  empty-queue:
+    uses: xfocus3/sandcastle/.github/workflows/agent-verification-queue.yml@f3882b8dc00d9c335517908e5b99269a7f75d127
+    with:
+      tool_ref: f3882b8dc00d9c335517908e5b99269a7f75d127
+      verification_workflows: '[".github/workflows/dot-transport-ci.yml"]'
+      # No issue is created. Exercise reusable-workflow startup and an empty
+      # selection without dispatching any project build or changing PRs.
+      pr_number: 2147483647
