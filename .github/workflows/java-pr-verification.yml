@@ -45,7 +45,7 @@ jobs:
             await core.summary.addHeading('Focused verification').addRaw(plan.reason).addRaw('\nSource: '+head).write();
   verify:
     needs: plan
-    uses: xfocus3/sandcastle/.github/workflows/java-target-check.yml@49c6d695a59a46f3e693555ffe949ea1f0959748
+    uses: xfocus3/sandcastle/.github/workflows/java-target-check.yml@63cb0a26f306e7c0705a1943db8745288b3489ba
     with:
       target_sha: ${{ inputs.target_sha }}
       arguments: ${{ needs.plan.outputs.arguments }}
