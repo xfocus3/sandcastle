@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: xfocus3/sandcastle
-          ref: 63cb0a26f306e7c0705a1943db8745288b3489ba
+          ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
           path: sandcastle-queue
           persist-credentials: false
       - id: queue
@@ -73,7 +73,7 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@63cb0a26f306e7c0705a1943db8745288b3489ba
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@bd5c492f0d1ca092ae58bac06407ea47442b7a17
     with:
       verification_workflows: ${{ inputs.verification_workflows }}
       review_exception: ${{ toJSON(matrix.pr.reviewException) }}
@@ -81,7 +81,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 63cb0a26f306e7c0705a1943db8745288b3489ba
+      tool_ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -90,13 +90,13 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@63cb0a26f306e7c0705a1943db8745288b3489ba
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@bd5c492f0d1ca092ae58bac06407ea47442b7a17
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 63cb0a26f306e7c0705a1943db8745288b3489ba
+      tool_ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
@@ -105,10 +105,10 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@63cb0a26f306e7c0705a1943db8745288b3489ba
+    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@bd5c492f0d1ca092ae58bac06407ea47442b7a17
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 63cb0a26f306e7c0705a1943db8745288b3489ba
+      tool_ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
