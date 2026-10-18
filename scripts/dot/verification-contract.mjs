@@ -9,5 +9,6 @@ export function workflowPath(workflow) {
 export function runForHead(run, head, workflow) {
   return run.path === workflowPath(workflow) && (typeof workflow === "string"
     ? run.head_sha === head
-    : run.display_title === "Sandcastle Java checks: " + head);
+    : run.event === "workflow_dispatch" && run.head_branch === workflow.ref &&
+      run.display_title === "Sandcastle Java checks: " + head);
 }
