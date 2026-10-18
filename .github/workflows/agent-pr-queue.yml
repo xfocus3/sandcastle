@@ -8,6 +8,9 @@ on:
       verification_workflows:
         type: string
         default: '[]'
+      review_exception:
+        type: string
+        default: 'null'
       pr_number:
         type: number
         default: 0
@@ -26,13 +29,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: xfocus3/sandcastle
-          ref: 9b05da2a475bd363723d7c9882cabe2b2ab19341
+          ref: 6759d3bcdb80b00905be3f9db8c102a8adfbd394
           path: sandcastle-queue
           persist-credentials: false
       - id: queue
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          REVIEW_EXCEPTION: ${{ inputs.review_exception }}
           VERIFICATION_WORKFLOWS: ${{ inputs.verification_workflows }}
           MODE: ${{ inputs.mode }}
           PR_NUMBER: ${{ inputs.pr_number }}
@@ -49,8 +53,12 @@ jobs:
             eligible='[]'
             while IFS= read -r pr; do
               head=$(jq -r .headRefOid <<< "$pr")
-              if node sandcastle-queue/scripts/dot/verification.mjs "$head" "$VERIFICATION_WORKFLOWS"; then
-                eligible=$(jq --argjson pr "$pr" '. + [$pr]' <<< "$eligible")
+              number=$(jq -r .number <<< "$pr")
+              exception=$(jq -c --argjson number "$number" 'if .pr_number == $number then . else null end' <<< "$REVIEW_EXCEPTION")
+              if PR_NUMBER="$number" node sandcastle-queue/scripts/dot/verification.mjs "$head" "$VERIFICATION_WORKFLOWS" "$exception"; then
+                eligible=$(jq --argjson pr "$pr" --argjson exception "$exception" '. + [$pr + {reviewException: $exception}]' <<< "$eligible")
+              else
+                echo "PR #$number: review waiting on verification for $head. Inspect the configured workflow runs." >> "$GITHUB_STEP_SUMMARY"
               fi
             done < <(jq -c '.[]' <<< "$prs")
             prs=$eligible
@@ -65,14 +73,15 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@9b05da2a475bd363723d7c9882cabe2b2ab19341
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@6759d3bcdb80b00905be3f9db8c102a8adfbd394
     with:
       verification_workflows: ${{ inputs.verification_workflows }}
+      review_exception: ${{ toJSON(matrix.pr.reviewException) }}
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9b05da2a475bd363723d7c9882cabe2b2ab19341
+      tool_ref: 6759d3bcdb80b00905be3f9db8c102a8adfbd394
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -81,13 +90,13 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@9b05da2a475bd363723d7c9882cabe2b2ab19341
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@6759d3bcdb80b00905be3f9db8c102a8adfbd394
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9b05da2a475bd363723d7c9882cabe2b2ab19341
+      tool_ref: 6759d3bcdb80b00905be3f9db8c102a8adfbd394
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
@@ -96,10 +105,10 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@9b05da2a475bd363723d7c9882cabe2b2ab19341
+    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@6759d3bcdb80b00905be3f9db8c102a8adfbd394
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9b05da2a475bd363723d7c9882cabe2b2ab19341
+      tool_ref: 6759d3bcdb80b00905be3f9db8c102a8adfbd394
