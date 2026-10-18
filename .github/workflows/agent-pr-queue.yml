@@ -11,6 +11,9 @@ on:
       review_exception:
         type: string
         default: 'null'
+      verification_run_id:
+        type: number
+        default: 0
       pr_number:
         type: number
         default: 0
@@ -34,6 +37,7 @@ jobs:
           persist-credentials: false
       - id: queue
         env:
+          WAIT_RUN_ID: ${{ inputs.verification_run_id }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           REVIEW_EXCEPTION: ${{ inputs.review_exception }}
@@ -42,6 +46,15 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number }}
         run: |
           set -euo pipefail
+          if [ "$WAIT_RUN_ID" != 0 ]; then
+            [[ "$WAIT_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+            completed=false
+            for attempt in {1..24}; do
+              if [ "$(gh api "repos/$GH_REPO/actions/runs/$WAIT_RUN_ID" --jq .status)" = completed ]; then completed=true; break; fi
+              sleep 5
+            done
+            if [ "$completed" != true ]; then echo "Verification producer has not completed"; exit 1; fi
+          fi
           case "$MODE" in
             review|update-branch) label="agent:$MODE" ;;
             implement-pr) label=agent:implement ;;

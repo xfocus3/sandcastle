@@ -92,5 +92,5 @@ jobs:
             if (!pr.labels.some(x=>x.name==='agent:review') || pr.labels.some(x=>x.name==='agent:in-progress')) {
               core.info('Review already consumed or owned by another run'); return;
             }
-            await github.rest.actions.createWorkflowDispatch({...context.repo,workflow_id:workflow,ref:context.ref.replace('refs/heads/',''),inputs:{pr_number:String(number)}});
+            await github.rest.actions.createWorkflowDispatch({...context.repo,workflow_id:workflow,ref:context.ref.replace('refs/heads/',''),inputs:{pr_number:String(number),verification_run_id:String(context.runId)}});
             await core.summary.addRaw('Focused checks passed; dispatched the review workflow for PR #'+number).write();
