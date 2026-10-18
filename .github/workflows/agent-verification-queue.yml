@@ -1,0 +1,47 @@
+name: Agent Verification Queue
+on:
+  workflow_call:
+    inputs:
+      verification_workflows:
+        type: string
+        required: true
+      pr_number:
+        type: number
+        default: 0
+      tool_ref:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: write
+  issues: write
+  pull-requests: read
+concurrency:
+  group: sandcastle-verification-dispatch
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: xfocus3/sandcastle
+          ref: ${{ inputs.tool_ref }}
+          path: sandcastle-tool
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dispatch missing verification for queued PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          VERIFICATION_WORKFLOWS: ${{ inputs.verification_workflows }}
+        run: |
+          set -euo pipefail
+          prs=$(gh pr list --state open --label agent:review --limit 100 --json number,isCrossRepository)
+          while IFS= read -r number; do
+            node sandcastle-tool/scripts/dot/dispatch-verification.mjs "$number" "$VERIFICATION_WORKFLOWS"
+          done < <(jq -r --argjson n "$PR_NUMBER" '.[] | select(.isCrossRepository == false and ($n == 0 or .number == $n)) | .number' <<< "$prs")

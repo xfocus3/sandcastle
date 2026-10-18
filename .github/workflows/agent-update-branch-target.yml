@@ -54,6 +54,12 @@ jobs:
           gh pr edit "$PR_NUMBER" --remove-label "agent:blocked" || true
           gh pr edit "$PR_NUMBER" --add-label "agent:in-progress"
 
+      - name: Keep changes in draft until verification and review
+        run: |
+          if [ "$(gh pr view "$PR_NUMBER" --json isDraft --jq .isDraft)" != "true" ]; then
+            gh pr ready "$PR_NUMBER" --undo
+          fi
+
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
@@ -139,6 +145,10 @@ jobs:
           if [ -f "$COMMENT_FILE" ]; then
             gh pr comment "$PR_NUMBER" --body-file "$COMMENT_FILE"
           fi
+
+      - name: Queue verification and review
+        if: success()
+        run: gh pr edit "$PR_NUMBER" --add-label "agent:review"
 
       - name: Mark blocked on failure
         if: failure()
