@@ -5,6 +5,9 @@ on:
       target_sha:
         type: string
         required: true
+      resume_workflow:
+        type: string
+        default: ''
       pr_number:
         type: number
         required: true
@@ -65,3 +68,29 @@ jobs:
           script: |
             const {data: pr} = await github.rest.pulls.get({...context.repo,pull_number:Number(process.env.PR_NUMBER)});
             if (pr.state !== 'open' || pr.head.sha !== process.env.TARGET_SHA) throw new Error('PR advanced during checks; verify the new head');
+  resume-review:
+    needs: current-head
+    if: inputs.resume_workflow != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          RESUME_WORKFLOW: ${{ inputs.resume_workflow }}
+        with:
+          script: |
+            const number = Number(process.env.PR_NUMBER);
+            const workflow = process.env.RESUME_WORKFLOW;
+            if (!/^[A-Za-z0-9_-]+\.ya?ml$/.test(workflow)) throw new Error('Invalid review workflow');
+            const {data:pr} = await github.rest.pulls.get({...context.repo,pull_number:number});
+            if (pr.state !== 'open' || pr.head.sha !== process.env.TARGET_SHA) throw new Error('PR advanced before review handoff');
+            if (!pr.labels.some(x=>x.name==='agent:review') || pr.labels.some(x=>x.name==='agent:in-progress')) {
+              core.info('Review already consumed or owned by another run'); return;
+            }
+            await github.rest.actions.createWorkflowDispatch({...context.repo,workflow_id:workflow,ref:context.ref.replace('refs/heads/',''),inputs:{pr_number:String(number)}});
+            await core.summary.addRaw('Focused checks passed; dispatched the review workflow for PR #'+number).write();
