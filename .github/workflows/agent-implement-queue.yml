@@ -2,6 +2,9 @@ name: Implement private issue
 on:
   workflow_call:
     inputs:
+      allow_public_workspace:
+        type: boolean
+        default: false
       upstream_repository:
         type: string
         required: true
@@ -40,11 +43,12 @@ jobs:
   sync:
     needs: queue
     if: needs.queue.outputs.count != '0'
-    uses: xfocus3/sandcastle/.github/workflows/sync-upstream.yml@0e3a0d3ff732c705f6d4f68cd67f63f7d9f77fce
+    uses: xfocus3/sandcastle/.github/workflows/sync-upstream.yml@f6409150ffee1ebc76d383af477309b438072dae
     secrets:
       upstream_sync_token: ${{ secrets.upstream_sync_token }}
     with:
       upstream_repository: ${{ inputs.upstream_repository }}
+      allow_public_workspace: ${{ inputs.allow_public_workspace }}
       upstream_branch: main
       baseline_branch: upstream-main
   implement:
