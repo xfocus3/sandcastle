@@ -51,7 +51,8 @@ jobs:
           [[ "$UPSTREAM" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
           git check-ref-format "refs/heads/$UPSTREAM_BRANCH"
           git check-ref-format "refs/heads/$BASELINE"
-          if [ "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" != true ] && [ "$ALLOW_PUBLIC_WORKSPACE" != true ]; then
+          private=$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)
+          if [ "$private" != true ] && { [ "$private" != false ] || [ "$ALLOW_PUBLIC_WORKSPACE" != true ]; }; then
             echo "Public workspaces require explicit allow_public_workspace opt-in."
             exit 1
           fi
