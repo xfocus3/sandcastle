@@ -39,11 +39,17 @@ export function reviewableHead(runs, head, workflows, exception) {
 
 export function fetchVerification(head, workflows, exception = null) {
   if (!/^[a-f0-9]{40}$/.test(head)) throw new Error("Expected an exact commit SHA");
-  const pages = JSON.parse(execFileSync("gh", [
-    "api", "--paginate", "--slurp",
-    `repos/${process.env.GH_REPO}/actions/runs?${workflows.some(workflow => typeof workflow !== "string") ? "" : `head_sha=${head}&`}per_page=100`,
-  ], { encoding: "utf8" }));
-  return exception ? reviewableHead(pages.flatMap(page => page.workflow_runs), head, workflows, exception) : verifiedHead(pages.flatMap(page => page.workflow_runs), head, workflows);
+  const runs = [];
+  for (let page = 1; ; page++) {
+    const response = JSON.parse(execFileSync("gh", [
+      "api",
+      `repos/${process.env.GH_REPO}/actions/runs?${workflows.some(workflow => typeof workflow !== "string") ? "" : `head_sha=${head}&`}per_page=100&page=${page}`,
+      "--jq", "{workflow_runs: [.workflow_runs[] | {id, head_sha, path, status, conclusion, run_attempt, event, head_branch, display_title}]}",
+    ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }));
+    runs.push(...response.workflow_runs);
+    if (response.workflow_runs.length < 100) break;
+  }
+  return exception ? reviewableHead(runs, head, workflows, exception) : verifiedHead(runs, head, workflows);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
