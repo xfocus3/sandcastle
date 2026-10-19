@@ -64,4 +64,4 @@ jobs:
       issue_title: ${{ matrix.issue.title }}
       base_sha: ${{ needs.sync.outputs.sha }}
       base_ref: upstream-main
-      tool_ref: 5b1ec8bb09169218c49e1b57bb86e4a6f78700a7
+      tool_ref: b762af4588eba1231574b4a62cc461e96268d2a7
