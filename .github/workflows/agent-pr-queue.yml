@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: xfocus3/sandcastle
-          ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
+          ref: 4d0a8a2da6bfc654edc3e2c6e4870f6207343146
           path: sandcastle-queue
           persist-credentials: false
       - id: queue
@@ -94,7 +94,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
+      tool_ref: 4d0a8a2da6bfc654edc3e2c6e4870f6207343146
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -109,7 +109,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
+      tool_ref: 4d0a8a2da6bfc654edc3e2c6e4870f6207343146
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
@@ -124,4 +124,4 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: bd5c492f0d1ca092ae58bac06407ea47442b7a17
+      tool_ref: 4d0a8a2da6bfc654edc3e2c6e4870f6207343146
