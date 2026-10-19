@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { dispatchDecision, dispatchMissing } from "../../../scripts/dot/dispatch-verification.mjs";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
+import { dispatchDecision, dispatchMissing, githubApi } from "../../../scripts/dot/dispatch-verification.mjs";
 const head = "a".repeat(40);
 const workflow = ".github/workflows/ci.yml";
 describe("verification dispatch", () => {
@@ -53,5 +54,67 @@ describe("verification dispatch", () => {
     expect(f.calls.filter(c => c.endpoint.includes("/dispatches"))).toHaveLength(1);
     const restart = fixture({receipt:true}); dispatchMissing(restart);
     expect(restart.calls.filter(c => c.method === "POST")).toHaveLength(0);
+  });
+});
+
+vi.mock("node:child_process", () => ({ execFileSync: vi.fn() }));
+
+describe("dispatch history transport", () => {
+  const pr = {state:"open", head:{sha:head, ref:"agent/fix", repo:{full_name:"owner/work"}},
+    labels:[{name:"agent:review"}]};
+  const options = {api:githubApi, repository:"owner/work", prNumber:2, workflows:[workflow]};
+  beforeEach(() => vi.clearAllMocks());
+
+  it("projects run fields and bounds each command response", () => {
+    vi.mocked(execFileSync).mockReturnValue(JSON.stringify({workflow_runs:[]}));
+    expect(githubApi("GET", "repos/owner/work/actions/runs?per_page=100", null, true)).toEqual([{workflow_runs:[]}]);
+    const args = vi.mocked(execFileSync).mock.calls[0][1] as string[];
+    expect(args).toContain("--jq");
+    expect(args.join(" ")).toContain("display_title");
+    expect(args).not.toContain("--slurp");
+    expect(vi.mocked(execFileSync).mock.calls[0][2]).toMatchObject({maxBuffer:8 * 1024 * 1024});
+  });
+
+  it("finds an existing run on a later page without dispatching", () => {
+    vi.mocked(execFileSync).mockImplementation((_command, args) => {
+      const endpoint = (args as string[])[3];
+      if (endpoint.includes("/pulls/")) return JSON.stringify(pr);
+      if (endpoint.includes("/comments")) return "[]";
+      return JSON.stringify({workflow_runs:endpoint.includes("page=2")
+        ? [{head_sha:head, path:workflow}]
+        : Array.from({length:100}, () => ({head_sha:"b".repeat(40), path:workflow}))});
+    });
+    expect(dispatchMissing(options)[0].decision).toBe("existing-run");
+    expect(vi.mocked(execFileSync).mock.calls.some(call => (call[1] as string[]).includes("POST"))).toBe(false);
+  });
+
+  it("preserves an older comment intent marker across pagination", () => {
+    vi.mocked(execFileSync).mockImplementation((_command, args) => {
+      const endpoint = (args as string[])[3];
+      if (endpoint.includes("/pulls/")) return JSON.stringify(pr);
+      if (endpoint.includes("/actions/runs")) return JSON.stringify({workflow_runs:[]});
+      return JSON.stringify(endpoint.includes("page=2")
+        ? [{body:`<!-- sandcastle-verification:${head}:${workflow} -->`}]
+        : Array.from({length:100}, () => ({body:"Earlier comment"})));
+    });
+    expect(dispatchMissing(options)[0].decision).toBe("uncertain-dispatch");
+    expect(vi.mocked(execFileSync).mock.calls.some(call => (call[1] as string[]).includes("POST"))).toBe(false);
+    expect(vi.mocked(execFileSync).mock.calls.some(call => (call[1] as string[]).includes("[.[] | {body}]"))).toBe(true);
+  });
+
+  it.each(["read-error", "malformed"])("performs no writes after %s history", mode => {
+    vi.mocked(execFileSync).mockImplementation((_command, args) => {
+      if ((args as string[])[3].includes("/pulls/")) return JSON.stringify(pr);
+      if (mode === "read-error") throw new Error("history unavailable");
+      return JSON.stringify({workflow_runs:null});
+    });
+    expect(() => dispatchMissing(options)).toThrow();
+    expect(vi.mocked(execFileSync).mock.calls.some(call => (call[1] as string[]).includes("POST"))).toBe(false);
+  });
+
+  it("stops on an empty comment page", () => {
+    vi.mocked(execFileSync).mockReturnValue("[]");
+    expect(githubApi("GET", "repos/owner/work/issues/2/comments?per_page=100", null, true)).toEqual([[]]);
+    expect(execFileSync).toHaveBeenCalledTimes(1);
   });
 });

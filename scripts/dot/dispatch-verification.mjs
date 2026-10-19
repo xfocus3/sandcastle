@@ -49,13 +49,31 @@ export function dispatchMissing({ api, repository, prNumber, workflows, operatio
   return decisions;
 }
 
-function githubApi(method, endpoint, body, paginate = false) {
-  const args = ["api", "--method", method];
-  if (paginate) args.push("--paginate", "--slurp");
-  args.push(endpoint);
+export function githubApi(method, endpoint, body, paginate = false) {
+  if (paginate) {
+    if (method !== "GET") throw new Error("Pagination requires a read request");
+    const runs = endpoint.includes("/actions/runs?");
+    if (!runs && !/\/comments\?/.test(endpoint)) throw new Error("Unsupported paginated history");
+    const projection = runs
+      ? "{workflow_runs: [.workflow_runs[] | {id, head_sha, path, status, conclusion, run_attempt, event, head_branch, display_title}]}"
+      : "[.[] | {body}]";
+    const pages = [];
+    for (let page = 1; ; page++) {
+      const output = execFileSync("gh", [
+        "api", "--method", method, endpoint + "&page=" + page, "--jq", projection,
+      ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
+      const response = JSON.parse(output);
+      const entries = runs ? response.workflow_runs : response;
+      if (!Array.isArray(entries)) throw new Error("Malformed paginated history");
+      pages.push(response);
+      if (entries.length < 100) return pages;
+    }
+  }
+  const args = ["api", "--method", method, endpoint];
   if (body) args.push("--input", "-");
   const output = execFileSync("gh", args, {
-    encoding: "utf8", input: body ? JSON.stringify(body) : undefined
+    encoding: "utf8", input: body ? JSON.stringify(body) : undefined,
+    maxBuffer: 8 * 1024 * 1024
   });
   return output.trim() ? JSON.parse(output) : null;
 }
