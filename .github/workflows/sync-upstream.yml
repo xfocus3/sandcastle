@@ -8,6 +8,10 @@ on:
       upstream_branch:
         type: string
         default: main
+      allow_public_workspace:
+        description: Explicitly allow a public workspace; source, issues and workflow artifacts are public
+        type: boolean
+        default: false
       baseline_branch:
         type: string
         default: upstream-main
@@ -40,13 +44,17 @@ jobs:
           UPSTREAM: ${{ inputs.upstream_repository }}
           UPSTREAM_BRANCH: ${{ inputs.upstream_branch }}
           BASELINE: ${{ inputs.baseline_branch }}
+          ALLOW_PUBLIC_WORKSPACE: ${{ inputs.allow_public_workspace }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$UPSTREAM" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
           git check-ref-format "refs/heads/$UPSTREAM_BRANCH"
           git check-ref-format "refs/heads/$BASELINE"
-          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = true
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" != true ] && [ "$ALLOW_PUBLIC_WORKSPACE" != true ]; then
+            echo "Public workspaces require explicit allow_public_workspace opt-in."
+            exit 1
+          fi
           git fetch --no-tags "https://github.com/$UPSTREAM.git" "refs/heads/$UPSTREAM_BRANCH"
           head=$(git rev-parse FETCH_HEAD)
           old=$(git ls-remote origin "refs/heads/$BASELINE" | cut -f1)
