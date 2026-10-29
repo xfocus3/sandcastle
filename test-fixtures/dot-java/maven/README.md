@@ -5,18 +5,16 @@ prompt-driven implementation using
 `.sandcastle/agent-workflows/implement/prompt.md`. Sandcastle itself remains
 TypeScript.
 
-## Public behavior and deliberately retained bug
+## Public behavior and regression coverage
 
 `Basket.add(item, quantity)` adds positive quantities of an item, and
 `Basket.quantityOf(item)` returns its current quantity, or zero when absent.
-The baseline test `example.BasketTest#recordsFirstAddition` covers one addition.
+Repeated additions accumulate: adding two coffees and then three coffees
+produces a quantity of five.
 
-Repeated additions currently replace the earlier quantity instead of
-accumulating it. The follow-up task is to add two coffees, then three coffees,
-and observe five through `quantityOf("coffee")`. The current implementation
-would return three. No failing regression test or fix is included yet: the
-native implementation step must add that test, observe its intended assertion
-failure in GitHub Actions, and only then make the minimum production fix.
+`example.BasketTest` covers the first addition, repeated additions, and a
+missing item. The repeated-addition case protects against replacing the
+previous quantity instead of accumulating it.
 
 ## Commands and execution
 
@@ -29,8 +27,8 @@ mvn -B -Dtest=example.BasketTest test
 mvn -B verify
 ```
 
-Actions generates fixture tooling with the official, pinned Maven Wrapper
-plugin before executing the wrapper. `MAVEN_VERSION` must be set to the Maven
+An authorized Actions job can generate fixture tooling with the official, pinned
+Maven Wrapper plugin before executing the wrapper. `MAVEN_VERSION` must be set to the Maven
 version explicitly selected by the job:
 
 ```sh
@@ -44,8 +42,6 @@ wrapper generation or binary files are included in this baseline. The POM pins
 JUnit and the build plugins; no services, credentials, formatter, static-analysis
 plugin, or integration suite are required.
 
-Status: unrun. The baseline is expected to execute one passing test; no Actions
-run or checked-SHA evidence has been observed yet. Record the exact command,
-run URL, checked SHA, and actual test count for each subsequent baseline,
-RED, GREEN, and final verification result. Keep generated reports in Actions,
-out of fixture source.
+The Actions job should publish the JUnit XML reports for the exact checked commit.
+Verify the actual test count and result there before treating a revision as
+passing. Keep generated reports in Actions, out of fixture source.
