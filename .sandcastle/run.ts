@@ -1,3 +1,4 @@
+import { readReviewStandards } from "./review-standards";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
@@ -91,6 +92,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
             agent: sandcastle.dot(),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
+              SANDCASTLE_CODING_STANDARDS: readReviewStandards(),
               ISSUE_NUMBER: String(issue.number),
               ISSUE_TITLE: issue.title,
               BRANCH: issue.branch,

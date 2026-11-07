@@ -46,7 +46,7 @@ Here are the last 10 commits:
    - Remove helpful abstractions that improve code organization
    - Make the code harder to debug or extend
 
-4. **Apply project standards**: Follow the established coding standards in the project at @.sandcastle/CODING_STANDARDS.md.
+4. **Apply project standards**: Follow the target project's `.sandcastle/CODING_STANDARDS.md` when present, alongside the pinned standards below.
 
 5. **Preserve functionality**: Never change what the code does - only how it does it. All original features, outputs, and behaviors must remain intact.
 
@@ -84,3 +84,9 @@ For Hibernate ORM changes, apply the relevant checks below even when the target 
 - Use one getter result for a related check-and-use or serialization operation when consistency requires it. Keep the fix narrow; this does not make `Session` thread-safe. (#11261)
 
 Full context and exact maintainer comments: [Sandcastle's Hibernate ORM lessons](https://github.com/xfocus3/sandcastle/blob/feat/java-agent-workflows/.sandcastle/CODING_STANDARDS.md#hibernate-orm-maintainer-review-lessons).
+
+## Standards from the pinned Sandcastle tool
+
+The following standards are supplied from the same pinned tool checkout as this review prompt, including when the target repository has no Sandcastle files. Apply relevant guidance alongside the target repository's own instructions; Hibernate-specific lessons apply only where the same contracts and risks exist. Do not assume the target repository contains this file or fetch a moving branch to replace this version.
+
+{{SANDCASTLE_CODING_STANDARDS}}

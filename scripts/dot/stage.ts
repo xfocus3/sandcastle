@@ -36,6 +36,8 @@ const controllerPaths = [
   "tsup.config.ts",
   "scripts",
   ".sandcastle/agent-workflows",
+  ".sandcastle/review-standards.ts",
+  ".sandcastle/CODING_STANDARDS.md",
   ".github/workflows",
 ];
 const toolRoot = resolve(import.meta.dirname, "../..");

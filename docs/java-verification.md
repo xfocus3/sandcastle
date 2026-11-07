@@ -45,3 +45,17 @@ All build/test execution stays in Actions. The coordinator handles reasoning and
 For automatic handoff, pass `resume_workflow: review.yml` to `java-pr-verification.yml` and allow the caller's `actions: write` permission. Only the final handoff job needs that permission. The review caller accepts `pr_number` and `verification_run_id` dispatch inputs and forwards the latter to `agent-pr-queue.yml`. The queue waits for the producer workflow to finish before checking its result. This avoids reviewing while the verification workflow is still completing. Do not additionally dispatch the same review from a competing completion listener.
 
 Before accepting evidence, inspect the XML test reports: required regression tests must have executed and passed, and skipped tests must be disclosed. Artifact upload alone does not prove tests ran. If a plan changes without a source-head change, explicitly start fresh verification for the changed plan and use that newer result; the current result identity does not itself encode a plan hash.
+
+### Updating review standards
+
+Review stages embed `.sandcastle/CODING_STANDARDS.md` from the pinned Sandcastle
+checkout in the prompt. They do not rely on that file existing in the target
+repository. Keep target-specific instructions and apply the embedded lessons
+only where their contracts and risks match.
+
+Publishing a standards change alone does not update pinned consumers. Publish
+and verify the tool revision first, update the review job's `tool_ref` in
+`agent-pr-queue.yml`, then update the caller's reusable-workflow SHA to that
+queue revision. Keep immutable SHAs: do not change running reviews or replay an
+old checkpoint under new standards. Standards are part of the recovery
+controller fingerprint.

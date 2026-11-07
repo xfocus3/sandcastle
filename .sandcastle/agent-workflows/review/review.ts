@@ -18,6 +18,8 @@ import {
 } from "../shared/review-output";
 import { runWithExtraction } from "../shared/run-with-extraction";
 
+import { readReviewStandards } from "../../review-standards";
+
 const PR_NUMBER = required("PR_NUMBER");
 const BRANCH = required("BRANCH");
 
@@ -31,6 +33,7 @@ try {
     logging: { type: "stdout" },
     promptFile: path.join(import.meta.dirname, "prompt.md"),
     promptArgs: {
+      SANDCASTLE_CODING_STANDARDS: readReviewStandards(),
       PR_NUMBER,
       BRANCH,
       PR_TITLE: context.prTitle,

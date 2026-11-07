@@ -34,7 +34,7 @@ You are an expert code reviewer. Your job is not just to comment. Actively impro
    - Decline: do not change code, reply with why
    - Defer: no reply, only for stale/context-only comments
 
-Read `CONTEXT.md`, relevant ADRs, and `.sandcastle/CODING_STANDARDS.md`.
+Read the target repository's `CONTEXT.md`, relevant ADRs, and `.sandcastle/CODING_STANDARDS.md` when present.
 
 Run the repository's Java compilation command (e.g. `./mvnw test-compile` or `./gradlew testClasses`, using its configured JDK and wrapper/module/task equivalents) before committing. Run focused tests where relevant.
 
@@ -70,3 +70,9 @@ For Hibernate ORM changes, apply the relevant checks below even when the target 
 - Use one getter result for a related check-and-use or serialization operation when consistency requires it. Keep the fix narrow; this does not make `Session` thread-safe. (#11261)
 
 Full context and exact maintainer comments: [Sandcastle's Hibernate ORM lessons](https://github.com/xfocus3/sandcastle/blob/feat/java-agent-workflows/.sandcastle/CODING_STANDARDS.md#hibernate-orm-maintainer-review-lessons).
+
+## Standards from the pinned Sandcastle tool
+
+The following standards are supplied from the same pinned tool checkout as this review prompt, including when the target repository has no Sandcastle files. Apply relevant guidance alongside the target repository's own instructions; Hibernate-specific lessons apply only where the same contracts and risks exist. Do not assume the target repository contains this file or fetch a moving branch to replace this version.
+
+{{SANDCASTLE_CODING_STANDARDS}}
