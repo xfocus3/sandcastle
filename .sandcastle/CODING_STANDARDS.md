@@ -219,3 +219,10 @@ The cited comment authors are identified as Hibernate organization members in Gi
 - #11261: werner77, merged December 9, 2025.
 
 Contributor acknowledgments, forwarded AI critiques, and superseded suggestions are not treated as maintainer guidance. In particular, #12880's final patch does not establish the additionally requested `REFRESH_SESSION` coverage. The earlier ownership example above is separate from this merged-PR evidence set.
+
+
+## Shared semantic logic and complete bug fixes
+
+- Extract nontrivial conditional or type-resolution logic into a clearly named method when it obscures the caller's intent. The method should express one semantic rule, not introduce a broad abstraction for its own sake.
+- When a defect comes from a rule repeated in sibling code paths, inspect those paths before declaring the fix complete. Correct the same root cause consistently and reuse the smallest appropriate helper instead of copying the patch. Preserve each caller's contextual behavior and keep genuinely different contracts separate.
+- Cover every affected entry point through observable behavior, with controls for behavior that must remain unchanged. Follow the existing RED/GREEN cycle for each regression, then refactor and rerun the focused tests; a shared helper alone does not prove that all callers are correct.
