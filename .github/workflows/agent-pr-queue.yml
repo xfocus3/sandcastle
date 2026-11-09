@@ -94,7 +94,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 0b9dda297f947117ad5e71c7a18877822009e1c7
+      tool_ref: 1521bde1760d15103465456631f150681243e9c0
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
