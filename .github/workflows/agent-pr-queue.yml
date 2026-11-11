@@ -94,7 +94,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 1521bde1760d15103465456631f150681243e9c0
+      tool_ref: a2b102f8a6bc0b44578160680ba77e2e49b14bc8
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -118,10 +118,10 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@bd5c492f0d1ca092ae58bac06407ea47442b7a17
+    uses: xfocus3/sandcastle/.github/workflows/agent-update-branch-target.yml@a2b102f8a6bc0b44578160680ba77e2e49b14bc8
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 4d0a8a2da6bfc654edc3e2c6e4870f6207343146
+      tool_ref: a2b102f8a6bc0b44578160680ba77e2e49b14bc8
