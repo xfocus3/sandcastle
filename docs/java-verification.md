@@ -11,7 +11,14 @@ Example Gradle plan:
   "build_tool": "gradle",
   "java_version": "25",
   "database": "h2",
-  "arguments": [":module:test", "--tests", "example.RegressionTest", "--tests", "example.neighbors.*", "formatChecks"],
+  "arguments": [
+    ":module:test",
+    "--tests",
+    "example.RegressionTest",
+    "--tests",
+    "example.neighbors.*",
+    "formatChecks"
+  ],
   "reason": "Regression and neighboring behavior for the changed module; compilation is included by the test task. Other databases and the full upstream suite are not claimed."
 }
 ```
@@ -19,6 +26,7 @@ Example Gradle plan:
 For Maven, use `build_tool: maven` and the project's wrapper/module arguments, for example `["-pl", "module", "-am", "-Dtest=RegressionTest,NeighborTest", "test"]`. Adapt reactor/test-selection semantics and the actual formatting goal to the project; do not copy a command that excludes required tests or suppresses failures.
 
 The private/default-branch caller `.github/workflows/scoped-java.yml` must:
+
 - use `workflow_dispatch` inputs `target_sha` and `pr_number`
 - set `run-name: 'Sandcastle Java checks: ${{ inputs.target_sha }}'`
 - invoke the pinned `java-pr-verification.yml` reusable workflow
@@ -27,7 +35,13 @@ The private/default-branch caller `.github/workflows/scoped-java.yml` must:
 Configure both verification dispatch and review with:
 
 ```json
-[{"path":".github/workflows/scoped-java.yml","source":"target-sha","ref":"main"}]
+[
+  {
+    "path": ".github/workflows/scoped-java.yml",
+    "source": "target-sha",
+    "ref": "main"
+  }
+]
 ```
 
 Use the actual trusted default branch instead of `main` where different. This source identity is accepted only for the configured workflow path. The reusable workflow validates same-repository PR ownership and current SHA, runs the trusted plan against that SHA, saves XML/source evidence, rejects formatter changes for an unpatched target, and rechecks the PR head afterward. A renamed title, wrong source, pending run, stale revision or failed run does not satisfy the review gate.
@@ -59,3 +73,11 @@ and verify the tool revision first, update the review job's `tool_ref` in
 queue revision. Keep immutable SHAs: do not change running reviews or replay an
 old checkpoint under new standards. Standards are part of the recovery
 controller fingerprint.
+
+## Branch updates before verification
+
+The automatic `update-branch` stage only performs fast-forward updates or an already-up-to-date no-op. Divergent histories fail before a merge commit, rebase, agent invocation, or source-branch publication. This is a deliberate safety limit, not an inference from contribution-guide prose and not automatic rebase support. Its existing workflow failure path reports the blocker and removes the in-progress label.
+
+Before a separate authorized update, read the target repository's current contribution instructions, select its permitted integration method, and preserve its commit-message and attribution requirements. Re-adding the label without resolving divergence will not unblock it. Hibernate requires rebasing instead of merge commits; other projects may have different policies.
+
+After integrating upstream changes, audit new callers and run the relevant checks on the resulting source revision. Use direct database assertions before a flush when immediate persistence is the contract. Report earlier-head evidence as historical, not validation of the rebased head. Updating the pinned review standards and the pinned branch-update tool are separate rollout steps; neither starts or resumes an existing agent task.

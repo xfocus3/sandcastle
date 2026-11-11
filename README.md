@@ -1386,6 +1386,10 @@ hooks: {
 - If any hook exits non-zero, setup fails fast.
 - When a `signal` is passed to `run()`, it is threaded to all hooks — aborting the signal cancels any in-flight hook commands.
 
+## Java workflow branch updates
+
+The Java `agent:update-branch` stage handles already-up-to-date and fast-forward cases only. It stops on divergent histories instead of choosing a merge or rebase policy for the target project. Follow that project's contribution rules through a separately authorized update, then verify the resulting revision. See [focused Java verification](docs/java-verification.md#branch-updates-before-verification).
+
 ## Development
 
 ```bash

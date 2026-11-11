@@ -1,41 +1,7 @@
-# TASK
+# Automatic branch-update boundary
 
-PR #{{PR_NUMBER}} (branch `{{BRANCH}}`) has merge conflicts against its base `{{BASE_REF}}`. A `git merge origin/{{BASE_REF}} --no-edit` has already been attempted and left the working tree in a conflicted state. Your job is to resolve every conflict, finish the merge, and write a PR comment describing what you did.
+The `update-branch` stage performs only an already-up-to-date no-op or a fast-forward to the verified pull request base. It does not invoke an agent to reconcile divergent histories.
 
-# CONTEXT
+If the histories diverge, stop before merging, rebasing, or publishing. Read the target repository's current contribution instructions and obtain a separately authorized, policy-compliant update. Do not infer permission from the absence of textual conflicts or automatically retry the same operation. Hibernate requires rebasing rather than merge commits; other repositories may differ.
 
-Read `CONTEXT.md` and any relevant ADRs under `docs/adr/` before resolving anything substantive.
-
-<pr-view>
-
-!`gh pr view {{PR_NUMBER}}`
-
-</pr-view>
-
-<merge-status>
-
-!`git status`
-
-</merge-status>
-
-<conflicting-files>
-
-!`git diff --name-only --diff-filter=U`
-
-</conflicting-files>
-
-# RESOLUTION POLICY
-
-Always resolve. Do not abort the merge. Do not leave the branch in a half-finished state.
-
-For each conflicting hunk:
-
-1. **Investigate intent on both sides** before choosing a resolution. Use `git log -p --follow -- <path>` on both `origin/{{BASE_REF}}` and `{{BRANCH}}` to see how each side reached this state. Read the commit messages. If a commit references an issue, pull it with `gh issue view <n>`.
-2. **Pick the resolution that preserves both intents** wherever possible. Where the intents are incompatible, pick the one that best matches the PR's stated goal (in `<pr-view>` above) and note the trade-off in your comment.
-3. **Do not invent new behaviour.** Your job is reconciliation, not feature work. If a sensible resolution requires writing new logic that wasn't on either side, that's a signal to flag uncertainty rather than to be creative.
-
-After resolving, run whatever checks you think are warranted — the repository's Java compilation command (e.g. `./mvnw test-compile` or `./gradlew testClasses`, using its configured JDK and wrapper/module/task equivalents) is fast and catches most resolution mistakes; the repository's Java test command (e.g. `./mvnw test` or `./gradlew test`, using its configured JDK and wrapper/module/task equivalents) if you want stronger confidence. You decide. If something is broken, fix what you can; if you can't, push what you have and flag it clearly in the comment.
-
-# COMMIT
-
-Stage everything and finish the merge with a single commit. Conventional-commit style, e.g. `chore: merge origin/{{BASE_REF}} into {{BRANCH}}`. The wrapper will push whatever you commit.
+After the authorized update, audit upstream-added callers and verify the new revision. The existing failure path records the blocker and removes the in-progress label. Do not replay an older merge-resolution checkpoint under this changed controller.

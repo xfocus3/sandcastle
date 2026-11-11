@@ -70,6 +70,18 @@ _Avoid_: "working branch", "agent branch"
 The **host**'s active branch at `run()` time -- the branch Sandcastle merges into when using **merge-to-head**.
 _Avoid_: "base branch", "destination branch", "merge target"
 
+**Pull request base**:
+The branch against which a pull request is reviewed. Distinct from the **target branch** of the **merge-to-head** strategy, which is the host's active branch at `run()` time.
+_Avoid_: "target branch" when referring specifically to pull request integration policy
+
+**Fast-forward update**:
+Advancing a branch to an existing descendant commit without creating a merge commit or rewriting existing commits. The automatic `update-branch` stage permits this and an already-up-to-date no-op.
+_Avoid_: "rebase", "conflict resolution"
+
+**Divergent histories**:
+Two branch tips that each contain commits absent from the other. This does not necessarily imply textual conflicts. The automatic `update-branch` stage stops before changing the source history; a separate authorized update must follow the repository's contribution policy.
+_Avoid_: "merge conflict" when only ancestry, not conflicting edits, has been established
+
 ### Agents
 
 **Agent provider**:

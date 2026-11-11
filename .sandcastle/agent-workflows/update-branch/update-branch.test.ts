@@ -1,5 +1,12 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,7 +50,11 @@ function commit(cwd: string, filename: string, content: string) {
   return git(cwd, "rev-parse", "HEAD");
 }
 
-function run(target: string, output: string) {
+function run(
+  target: string,
+  output: string,
+  overrides: Record<string, string> = {},
+) {
   return spawnSync(process.execPath, [tsx, script], {
     cwd: target,
     env: {
@@ -52,6 +63,7 @@ function run(target: string, output: string) {
       BRANCH: "topic",
       BASE_REF: "main",
       OUTPUT_DIR: output,
+      ...overrides,
     },
     encoding: "utf8",
     timeout: 15000,
@@ -79,4 +91,165 @@ it("blocks cleanly divergent histories without creating a merge commit", () => {
   expect(readFileSync(join(output, "failure_reason.txt"), "utf8")).toMatch(
     /diverg|contribution/i,
   );
+});
+
+it.each([false, true])(
+  "keeps an already-current branch unchanged (ahead: %s)",
+  (ahead) => {
+    const { target, output } = fixture();
+    if (ahead) commit(target, "feature.txt", "feature\n");
+    const head = git(target, "rev-parse", "HEAD");
+    mkdirSync(output);
+    writeFileSync(join(output, "should_push.txt"), "true");
+    writeFileSync(join(output, "comment.md"), "stale publication");
+    writeFileSync(join(output, "failure_reason.txt"), "stale failure");
+
+    const result = run(target, output);
+
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    expect(git(target, "rev-parse", "HEAD")).toBe(head);
+    expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("false");
+    expect(readFileSync(join(output, "comment.md"), "utf8")).toContain(
+      "already up to date",
+    );
+    expect(existsSync(join(output, "failure_reason.txt"))).toBe(false);
+  },
+);
+
+it("fast-forwards to the existing base commit without synthesizing a commit", () => {
+  const { origin, target, output } = fixture();
+  const head = git(target, "rev-parse", "HEAD");
+  const base = commit(origin, "upstream.txt", "upstream\n");
+
+  const result = run(target, output);
+
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(0);
+  expect(git(target, "rev-parse", "HEAD")).toBe(base);
+  expect(git(target, "rev-list", "--merges", `${head}..HEAD`)).toBe("");
+  expect(git(target, "status", "--porcelain")).toBe("");
+  expect(readFileSync(join(target, "upstream.txt"), "utf8")).toBe("upstream\n");
+  expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("true");
+  expect(readFileSync(join(output, "comment.md"), "utf8")).toContain(
+    "fast-forwarded",
+  );
+});
+
+it("blocks conflicting divergence before leaving merge state or invoking an agent", () => {
+  const { origin, target, output } = fixture();
+  const head = commit(target, "base.txt", "feature\n");
+  commit(origin, "base.txt", "upstream\n");
+
+  const result = run(target, output);
+
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
+  expect(git(target, "rev-parse", "HEAD")).toBe(head);
+  expect(git(target, "status", "--porcelain")).toBe("");
+  expect(readFileSync(join(target, "base.txt"), "utf8")).toBe("feature\n");
+  expect(
+    existsSync(
+      join(target, git(target, "rev-parse", "--git-path", "MERGE_HEAD")),
+    ),
+  ).toBe(false);
+  expect(readFileSync(join(output, "failure_reason.txt"), "utf8")).toContain(
+    "histories have diverged",
+  );
+  expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("false");
+  expect(existsSync(join(output, "comment.md"))).toBe(false);
+});
+
+it("preserves dirty work and clears stale publication output instead of fast-forwarding", () => {
+  const { origin, target, output } = fixture();
+  const head = git(target, "rev-parse", "HEAD");
+  commit(origin, "upstream.txt", "upstream\n");
+  writeFileSync(join(target, "base.txt"), "uncommitted\n");
+  const status = git(target, "status", "--porcelain");
+  mkdirSync(output);
+  writeFileSync(join(output, "should_push.txt"), "true");
+  writeFileSync(join(output, "comment.md"), "stale publication");
+
+  const result = run(target, output);
+
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
+  expect(git(target, "rev-parse", "HEAD")).toBe(head);
+  expect(git(target, "status", "--porcelain")).toBe(status);
+  expect(readFileSync(join(target, "base.txt"), "utf8")).toBe("uncommitted\n");
+  expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("false");
+  expect(existsSync(join(output, "comment.md"))).toBe(false);
+  expect(readFileSync(join(output, "failure_reason.txt"), "utf8")).toContain(
+    "not clean",
+  );
+});
+
+it("fails closed when the requested base cannot be fetched", () => {
+  const { target, output } = fixture();
+  const head = git(target, "rev-parse", "HEAD");
+
+  const result = run(target, output, { BASE_REF: "missing" });
+
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
+  expect(git(target, "rev-parse", "HEAD")).toBe(head);
+  expect(git(target, "status", "--porcelain")).toBe("");
+  expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("false");
+  expect(existsSync(join(output, "comment.md"))).toBe(false);
+});
+
+it("does not disturb an existing Git operation", () => {
+  const { target, output } = fixture();
+  const head = git(target, "rev-parse", "HEAD");
+  const state = join(
+    target,
+    git(target, "rev-parse", "--git-path", "MERGE_HEAD"),
+  );
+  writeFileSync(state, `${head}\n`);
+
+  const result = run(target, output);
+
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
+  expect(git(target, "rev-parse", "HEAD")).toBe(head);
+  expect(readFileSync(state, "utf8")).toBe(`${head}\n`);
+  expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("false");
+  expect(readFileSync(join(output, "failure_reason.txt"), "utf8")).toContain(
+    "already in progress",
+  );
+});
+
+it("rejects a checkout that no longer matches the requested source branch", () => {
+  const { target, output } = fixture();
+  const head = git(target, "rev-parse", "HEAD");
+
+  const result = run(target, output, { BRANCH: "different" });
+
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
+  expect(git(target, "rev-parse", "HEAD")).toBe(head);
+  expect(readFileSync(join(output, "should_push.txt"), "utf8")).toBe("false");
+});
+
+it("retains workflow failure cleanup and only uses ordinary fast-forward pushes", () => {
+  for (const name of [
+    "agent-update-branch.yml",
+    "agent-update-branch-target.yml",
+  ]) {
+    const workflow = readFileSync(
+      new URL(`../../../.github/workflows/${name}`, import.meta.url),
+      "utf8",
+    );
+    expect(workflow).toContain("if: failure()");
+    expect(workflow).toContain('--add-label "agent:blocked"');
+    expect(workflow).toContain("if: always()");
+    expect(workflow).toContain('--remove-label "agent:in-progress"');
+    expect(workflow).toContain('push origin "$BRANCH"');
+    expect(workflow).not.toContain("push --force");
+    expect(workflow).toContain('git checkout -B "$BRANCH" "$BRANCH_HEAD_SHA"');
+    expect(workflow).not.toContain("git branch --force main");
+    expect(workflow).toContain(
+      "Divergent histories require a separately authorized update.",
+    );
+  }
 });

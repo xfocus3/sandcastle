@@ -1,123 +1,80 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { execFileSync } from "node:child_process";
-import * as sandcastle from "@ai-hero/sandcastle";
-import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
-import {
-  asRecord,
-  asString,
-  dotAgent,
-  fail,
-  required,
-  sh,
-  standardSchema,
-  writeText,
-} from "../shared/common";
-import { runWithExtraction } from "../shared/run-with-extraction";
+import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { fail, outputDir, required, writeText } from "../shared/common";
 
-interface UpdateBranchOutput {
-  readonly comment: string;
-}
-
-const updateBranchOutputSchema = standardSchema<UpdateBranchOutput>((value) => {
-  const record = asRecord(value, "update-branch output");
-  return { comment: asString(record.comment, "comment") };
-});
-
-const PR_NUMBER = required("PR_NUMBER");
 const BRANCH = required("BRANCH");
 const BASE_REF = required("BASE_REF");
+const git = (...args: string[]) =>
+  execFileSync("git", args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+
+// A failed or repeated invocation must never reuse an earlier publication signal.
+writeText("should_push.txt", "false");
+rmSync(join(outputDir(), "comment.md"), { force: true });
+rmSync(join(outputDir(), "failure_reason.txt"), { force: true });
 
 try {
-  execFileSync("git", ["fetch", "origin", BASE_REF], { stdio: "inherit" });
-
-  const preMergeSha = sh("git rev-parse HEAD").trim();
-  const baseSha = sh(`git rev-parse origin/${BASE_REF}`).trim();
-
-  const mergeBase = sh(`git merge-base HEAD origin/${BASE_REF}`).trim();
-  if (mergeBase === baseSha) {
-    writeText(
-      "comment.md",
-      `\`agent:update-branch\`: branch is already up to date with \`origin/${BASE_REF}\`. No merge needed.`,
-    );
-    writeText("should_push.txt", "false");
-    console.log("Already up to date — nothing to do.");
-    process.exit(0);
+  git("check-ref-format", `refs/heads/${BASE_REF}`);
+  if (git("symbolic-ref", "--short", "HEAD") !== BRANCH) {
+    fail("The checked-out branch changed. Reconcile it before retrying.");
+  }
+  for (const state of [
+    "MERGE_HEAD",
+    "rebase-merge",
+    "rebase-apply",
+    "sequencer",
+  ]) {
+    if (existsSync(git("rev-parse", "--git-path", state))) {
+      fail(
+        "A Git operation is already in progress. Reconcile it before retrying.",
+      );
+    }
   }
 
-  const mergeResult = tryMerge();
+  git(
+    "fetch",
+    "origin",
+    `refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}`,
+  );
+  const head = git("rev-parse", "HEAD");
+  const base = git("rev-parse", `refs/remotes/origin/${BASE_REF}`);
+  const mergeBase = git("merge-base", head, base);
 
-  if (mergeResult.status === "clean") {
+  if (mergeBase === base) {
     writeText(
       "comment.md",
-      `\`agent:update-branch\`: merged \`origin/${BASE_REF}\` (\`${baseSha.slice(
-        0,
-        7,
-      )}\`) into \`${BRANCH}\` cleanly — no conflicts.`,
+      `\`agent:update-branch\`: branch is already up to date with \`origin/${BASE_REF}\`. No update needed.`,
+    );
+    console.log("Already up to date; nothing to push.");
+  } else if (mergeBase !== head) {
+    fail(
+      "Branch histories have diverged. No merge or rebase was attempted. Read the target repository's contribution rules and complete a separately authorized, policy-compliant update before retrying. This automatic stage only permits fast-forward updates.",
+    );
+  } else {
+    if (git("status", "--porcelain")) {
+      fail(
+        "The working tree is not clean. Preserve and reconcile changes before retrying.",
+      );
+    }
+    // An immutable descendant and --ff-only prohibit creating a merge commit.
+    git("merge", "--ff-only", "--no-edit", base);
+    if (git("rev-parse", "HEAD") !== base) {
+      fail(
+        "The branch changed during the fast-forward update. Reconcile before publication.",
+      );
+    }
+    writeText(
+      "comment.md",
+      `\`agent:update-branch\`: fast-forwarded \`${BRANCH}\` to \`origin/${BASE_REF}\` (\`${base.slice(0, 7)}\`) without creating or rewriting commits.`,
     );
     writeText("should_push.txt", "true");
-    console.log("Clean merge — wrapper will push.");
-    process.exit(0);
+    console.log("Fast-forward complete; wrapper may publish the branch.");
   }
-
-  console.log(
-    `Merge produced conflicts in ${mergeResult.conflicts.length} file(s) — invoking agent.`,
+} catch {
+  fail(
+    "Could not safely determine or complete a fast-forward update. Check the repository state and base ref before retrying. No branch publication was authorized.",
   );
-
-  const result = await runWithExtraction({
-    name: `update-branch-pr-${PR_NUMBER}`,
-    agent: dotAgent(),
-    sandbox: noSandbox(),
-    logging: { type: "stdout" },
-    promptFile: path.join(import.meta.dirname, "prompt.md"),
-    promptArgs: {
-      PR_NUMBER,
-      BRANCH,
-      BASE_REF,
-    },
-    output: sandcastle.Output.object({
-      tag: "output",
-      schema: updateBranchOutputSchema,
-    }),
-    extractionPrompt: fs.readFileSync(
-      path.join(import.meta.dirname, "extraction.md"),
-      "utf8",
-    ),
-  });
-
-  const postSha = sh("git rev-parse HEAD").trim();
-  if (postSha === preMergeSha) {
-    fail("Agent produced no commits — branch still at pre-merge HEAD.");
-  }
-
-  const unresolved = sh("git diff --name-only --diff-filter=U").trim();
-  if (unresolved) {
-    fail(`Agent left unresolved conflicts in:\n${unresolved}`);
-  }
-
-  writeText("comment.md", result.output.comment);
-  writeText("should_push.txt", "true");
-  console.log(`Agent resolved conflicts. Wrapper will push ${postSha}.`);
-} catch (error) {
-  fail(error instanceof Error ? error.message : String(error));
-}
-
-function tryMerge():
-  | { status: "clean" }
-  | { status: "conflict"; conflicts: string[] } {
-  try {
-    execFileSync("git", ["merge", `origin/${BASE_REF}`, "--no-edit"], {
-      stdio: "inherit",
-    });
-    return { status: "clean" };
-  } catch {
-    const conflicts = sh("git diff --name-only --diff-filter=U")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-    if (conflicts.length === 0) {
-      fail("git merge failed but no conflicts reported — aborting.");
-    }
-    return { status: "conflict", conflicts };
-  }
 }

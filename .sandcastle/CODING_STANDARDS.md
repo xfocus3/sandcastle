@@ -128,7 +128,7 @@ test("checkout calls paymentService.process", async () => {
   expect(mockPayment.process).toHaveBeenCalledWith(cart.total);
 });
 
-// BAD: Bypasses the interface to verify via database
+// BAD: Couples a retrieval test to storage unrelated to its contract
 test("createUser saves to database", async () => {
   await createUser({ name: "Alice" });
   const row = await db.query("SELECT * FROM users WHERE name = ?", ["Alice"]);
@@ -140,10 +140,12 @@ Red flags:
 
 - Mocking internal collaborators (your own classes/modules)
 - Testing private methods
-- Asserting on call counts/order of internal calls
+- Asserting on call counts/order of internal calls unrelated to a supported extension contract
 - Test breaks when refactoring without behavior change
 - Test name describes HOW not WHAT
-- Verifying through external means (e.g. querying a DB) instead of through the interface
+- Verifying an unrelated implementation detail instead of the promised behavior
+
+Database state and extension dispatch can themselves be observable contracts. For ORM schema generation, locking, and persistence timing, invoke the supported API and inspect the actual database when needed to distinguish persisted state from the session's managed state. For immediate-execution guarantees, make that assertion before any flush or commit that could hide deferred work. A registered extension's invocation is also a valid compatibility assertion; this does not justify mocking arbitrary internal collaborators.
 
 ### Mocking
 
@@ -193,7 +195,7 @@ Avoid shallow modules: large interface with many methods that just pass through 
 - Test the required observable behavior: null handling, order, size, and rejection of mutation where promised. Do not introduce a defensive-copy guarantee solely to justify the implementation. Retain isolation tests when isolation is part of the contract.
 - Reviewers must challenge redundant allocations and abstractions using call-path evidence, preserve required behavior, and rerun focused tests after simplification.
 
-Example: [Hibernate HHH-20328 review](https://github.com/hibernate/hibernate-orm/pull/13712/commits/684b74e44a1047162ba796d6a8ced4331cf3521e) removed redundant result-array clones after verifying that `StandardRowReader` allocates a fresh array per result. Null handling and unmodifiable-list behavior remain covered; this is not a blanket rule against copying.
+Example: [Hibernate HHH-20328 review](https://github.com/hibernate/hibernate-orm/pull/13712/commits/684b74e44a1047162ba796d6a8ced4331cf3521e) removed redundant result-array clones after verifying that `StandardRowReader` allocates a fresh array per result. That was an intermediate revision: the [later review](https://github.com/hibernate/hibernate-orm/pull/13712#discussion_r4507271773) also removed the unnecessary unmodifiable wrappers. The current [PR](https://github.com/hibernate/hibernate-orm/pull/13712) returns fixed-size lists that preserve nulls and allow element replacement; adding or removing elements remains unsupported. Distinguish those contracts from both an unmodifiable view and an independent snapshot. This is not a blanket rule against copying, and the PR is still open.
 
 ## Hibernate ORM maintainer review lessons
 
@@ -220,12 +222,12 @@ The cited comment authors are identified as Hibernate organization members in Gi
 
 Contributor acknowledgments, forwarded AI critiques, and superseded suggestions are not treated as maintainer guidance. In particular, #12880's final patch does not establish the additionally requested `REFRESH_SESSION` coverage. The earlier ownership example above is separate from this merged-PR evidence set.
 
-
 ## Shared semantic logic and complete bug fixes
 
 - Extract nontrivial conditional or type-resolution logic into a clearly named method when it obscures the caller's intent. The method should express one semantic rule, not introduce a broad abstraction for its own sake.
 - When a defect comes from a rule repeated in sibling code paths, inspect those paths before declaring the fix complete. Correct the same root cause consistently and reuse the smallest appropriate helper instead of copying the patch. Preserve each caller's contextual behavior and keep genuinely different contracts separate.
 - Cover every affected entry point through observable behavior, with controls for behavior that must remain unchanged. Follow the existing RED/GREEN cycle for each regression, then refactor and rerun the focused tests; a shared helper alone does not prove that all callers are correct.
+- Repeat the caller audit after rebasing: upstream may add entry points without producing a textual conflict. Recheck timing, cleanup, and acquisition order on the combined revision rather than assuming an older test result covers the new call graph. For example, the [November 11 review of #13881](https://github.com/hibernate/hibernate-orm/pull/13881#pullrequestreview-5856580048) identifies a new extended-scope direct-locking caller whose managed version advances before the database update. This is a reviewer-posted regression finding, not a verified fix.
 
 ## General lessons from our Hibernate PR reviews
 
@@ -242,8 +244,21 @@ Apply these principles when the same contracts and risks are present. The source
 
 Apply these review checks when a change affects an existing extension point or database-dependent behavior:
 
-- Preserve existing override dispatch. Before routing an established API through a new overload or shared helper, check which subclass overrides callers previously reached. For Hibernate optimistic force increments, keep `forceVersionIncrement(id, version, session)` so custom persisters overriding only that method still participate. Use a clearly named immediate helper for pessimistic callers when that makes the distinct timing contract explicit.
-- Add a focused regression through the supported extension mechanism. Register a custom `SingleTableEntityPersister` subclass overriding only the existing three-argument method, exercise the optimistic transaction callback, and verify that the extension still runs and the version behavior is correct. Keep pessimistic immediate execution and SQL-failure cache cleanup covered. This tests an extension contract; it does not justify assertions about arbitrary internal collaborators.
+- Preserve existing override dispatch. Before routing an established API through a new overload or shared helper, check which subclass overrides callers previously reached. For Hibernate force increments, preserve `forceVersionIncrement(id, version, session)` override dispatch for both optimistic and pessimistic callers, including configurations with batching disabled. An immediate helper must preserve that extension contract rather than bypass it through a new overload. Timing and dispatch are separate requirements.
+- Add a focused regression through the supported extension mechanism. Register a custom `SingleTableEntityPersister` subclass overriding only the existing three-argument method, exercise both the optimistic transaction callback and pessimistic lock paths, and verify that the extension still runs and the version behavior is correct. Include batching-enabled and batching-disabled controls where timing is relevant. Keep pessimistic immediate execution and SQL-failure cache cleanup covered. This tests an extension contract; it does not justify assertions about arbitrary internal collaborators.
 - Guard each regression with the database capabilities its scenario requires, following nearby tests. A single-table temporal version update that changes the primary key requires `@RequiresDialectFeature(feature = DialectFeatureChecks.SupportsPrimaryKeyUpdate.class)`; a follow-on locking scenario requires `SupportsSelectLocking`. Keep guards at the narrowest applicable test scope, verify the dialect declaration, and do not use skips to hide supported behavior that fails. A silently omitted increment on a dialect without locking-select support needs separate tracking because changing batching only affects calls that reach the increment helper.
 
-Source: [Gavin King's review of Hibernate ORM #13881](https://github.com/hibernate/hibernate-orm/pull/13881#pullrequestreview-5819495543), an open PR. The review accepts immediate pessimistic execution and cache unlock on SQL failure while requesting preserved optimistic override dispatch, a custom-persister regression, and the two feature guards. This records the review requirements, not a claim that the follow-up was merged or that every dialect was validated.
+Source: [Gavin King's review of Hibernate ORM #13881](https://github.com/hibernate/hibernate-orm/pull/13881#pullrequestreview-5819495543), an open PR. The review accepts immediate pessimistic execution and cache unlock on SQL failure while requesting preserved optimistic override dispatch, a custom-persister regression, and the two feature guards. The [November 11 follow-up](https://github.com/hibernate/hibernate-orm/pull/13881#pullrequestreview-5856580048) additionally identifies bypassed pessimistic overrides and the new direct-locking path. These comments are posted by Gavin King and attributed to Astra. They record review findings and requested regressions, not independently reproduced fixes, accepted implementations, or proof that every dialect was validated.
+
+## Effective configuration and mapped dirty checking
+
+These are scoped findings from the November 11, 2026 reviews posted by Gavin King and attributed to Astra. The PRs are open; the proposed remedies have not been established here as accepted or independently verified fixes.
+
+- **Resolve effective declarations, not annotation presence.** A non-null annotation member can be an implicit default. Resolve an override's outer and nested declarations according to their contract before falling back to inherited mapping or provider defaults. Preserve explicit nested suppression, names, definitions, and options. Pair the new mapping form with ordinary-mapping controls so broadening a resolver does not regress existing behavior. In [#13726](https://github.com/hibernate/hibernate-orm/pull/13726#pullrequestreview-5856579774), an omitted outer `AssociationOverride.foreignKey()` masks explicit `NO_CONSTRAINT` or an FK name on its ordinary nested `JoinColumn`; test both cases through the generated schema. Do not invent precedence for combinations the specification leaves undefined.
+- **Use the mapped dirty-check contract when suppressing dirtiness.** Equality alone is insufficient for mutable values whose mutability plan cannot create an independent snapshot. Keep known-snapshot and unfetched-value guards, and do not remove dirtiness already reported by the mapped type merely because values compare equal. In [#13652](https://github.com/hibernate/hibernate-orm/pull/13652#pullrequestreview-5856580365), the reviewer requests `isDirty()` semantics and a no-copy mutable-version regression. Compare enhanced and unenhanced behavior, including the database version after flush, while retaining genuine property-change and setter-side-effect controls.
+
+## Repository-specific contribution and branch updates
+
+Read the target revision's contribution instructions before choosing how to integrate upstream changes or format commits. A clean textual merge is not proof that the integration method is allowed. Hibernate's [contribution guide](https://github.com/hibernate/hibernate-orm/blob/main/CONTRIBUTING.md#commit) requires rebasing rather than merge commits and issue-key commit messages; do not generalize that rule to every repository.
+
+The automatic `update-branch` stage only handles no-op and fast-forward cases. Divergent histories require a separate, authorized, repository-policy-aware update; the stage must stop before creating a merge commit or rewriting history. After any approved rebase, audit newly introduced callers and rerun relevant verification on the new revision. Earlier evidence does not transfer automatically.

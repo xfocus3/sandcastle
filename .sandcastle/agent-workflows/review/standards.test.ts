@@ -71,6 +71,12 @@ it("delivers current tool standards in the actual review stage from an external 
   expect(rendered).toContain(expected);
   expect(rendered).toContain("General lessons from our Hibernate PR reviews");
   expect(rendered).toContain("Keep diagnostics useful and bounded");
+  expect(rendered).toContain(
+    "Resolve effective declarations, not annotation presence",
+  );
+  expect(rendered).toContain("Use the mapped dirty-check contract");
+  expect(rendered).toContain("both optimistic and pessimistic callers");
+  expect(rendered).toContain("Divergent histories require a separate");
   expect(rendered).not.toContain("{{SANDCASTLE_CODING_STANDARDS}}");
   expect(rendered).not.toContain(target);
 
