@@ -8,7 +8,7 @@ import { afterEach, expect, it } from "vitest";
 const directories: string[] = [];
 const script = fileURLToPath(new URL("./update-branch.ts", import.meta.url));
 const tsx = fileURLToPath(
-  new URL("../../../../node_modules/tsx/dist/cli.mjs", import.meta.url),
+  new URL("../../../node_modules/tsx/dist/cli.mjs", import.meta.url),
 );
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, {
