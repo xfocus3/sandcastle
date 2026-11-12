@@ -262,3 +262,8 @@ These are scoped findings from the November 11, 2026 reviews posted by Gavin Kin
 Read the target revision's contribution instructions before choosing how to integrate upstream changes or format commits. A clean textual merge is not proof that the integration method is allowed. Hibernate's [contribution guide](https://github.com/hibernate/hibernate-orm/blob/main/CONTRIBUTING.md#commit) requires rebasing rather than merge commits and issue-key commit messages; do not generalize that rule to every repository.
 
 The automatic `update-branch` stage only handles no-op and fast-forward cases. Divergent histories require a separate, authorized, repository-policy-aware update; the stage must stop before creating a merge commit or rewriting history. After any approved rebase, audit newly introduced callers and rerun relevant verification on the new revision. Earlier evidence does not transfer automatically.
+
+## Target-branch formatting and publication evidence
+
+- **Respect target-branch formatting rules.** Check the target revision's formatter and source-header configuration before copying headers or style from another branch. Run that revision's format checks; do not add or remove license headers solely because a neighboring branch uses a different convention.
+- **Prove publication matches verification.** Before publishing a fix, verify that its complete source tree matches the reviewed GREEN tree, including formatter output. Record the base, tested tree, regression failures, pass/failure/skip counts, and validation scope. A successful upload or workflow job alone is not proof that the expected tests executed or that a separate quality gate passed.
