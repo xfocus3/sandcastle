@@ -1,3 +1,4 @@
+import { readReviewStandards } from "../../review-standards";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
@@ -30,6 +31,7 @@ try {
     logging: { type: "stdout" },
     promptFile: path.join(import.meta.dirname, "prompt.md"),
     promptArgs: {
+      SANDCASTLE_CODING_STANDARDS: readReviewStandards(),
       PR_NUMBER,
       BRANCH,
       PR_TITLE: context.prTitle,

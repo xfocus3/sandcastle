@@ -44,7 +44,6 @@ Do not create or edit PRs.
 
 When complete, output `<promise>COMPLETE</promise>`.
 
-
 ## Verification scope
 
 Prove each bug with a failing regression before the fix, then run the focused regression and the relevant neighboring package or affected module, plus compilation and repository formatting checks. Use the configured JDK and Maven/Gradle wrapper. Select broader integration or live-database checks when the changed behavior requires them; do not make the entire upstream CI matrix the default prerequisite for private code review. Run these checks through the configured Actions feedback loop and record exact source revisions, commands, passes, failures, skips, and untested coverage. Never count a timeout, stale run, missing test, or baseline failure as a pass. Report wider checks deferred to upstream CI explicitly; upstream contribution and maintainer requirements still apply. Recheck after review changes.
@@ -66,3 +65,9 @@ For Hibernate ORM changes, apply the relevant checks below even when the target 
 - Use one getter result for a related check-and-use or serialization operation when consistency requires it. Keep the fix narrow; this does not make `Session` thread-safe. (#11261)
 
 Full context and exact maintainer comments: [Sandcastle's Hibernate ORM lessons](https://github.com/xfocus3/sandcastle/blob/feat/java-agent-workflows/.sandcastle/CODING_STANDARDS.md#hibernate-orm-maintainer-review-lessons).
+
+## Standards from the pinned Sandcastle tool
+
+The following standards are supplied from the same pinned tool checkout as this prompt, including when the target repository has no Sandcastle files. Apply relevant guidance alongside the target repository's own instructions; Hibernate-specific lessons apply only where the same contracts and risks exist. Do not assume the target repository contains this file or fetch a moving branch to replace this version.
+
+{{SANDCASTLE_CODING_STANDARDS}}

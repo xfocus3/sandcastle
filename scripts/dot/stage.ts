@@ -36,6 +36,8 @@ const controllerPaths = [
   "tsup.config.ts",
   "scripts",
   ".sandcastle/agent-workflows",
+  ".sandcastle/review-standards.ts",
+  ".sandcastle/CODING_STANDARDS.md",
   ".github/workflows",
 ];
 const toolRoot = resolve(import.meta.dirname, "../..");
@@ -43,7 +45,15 @@ const externalTarget = toolRoot !== process.cwd();
 const controllerHash = () =>
   externalTarget
     ? hash({
-        tool: git("-C", toolRoot, "ls-tree", "-r", "HEAD", "--", ...controllerPaths),
+        tool: git(
+          "-C",
+          toolRoot,
+          "ls-tree",
+          "-r",
+          "HEAD",
+          "--",
+          ...controllerPaths,
+        ),
         workflows: git("ls-tree", "-r", "HEAD", "--", ".github/workflows"),
       })
     : hash(git("ls-tree", "-r", "HEAD", "--", ...controllerPaths));
@@ -149,8 +159,11 @@ if (script === "--resume") {
   const refs = script.endsWith("/explore.ts")
     ? []
     : script.endsWith("/update-branch.ts") && process.env.BASE_REF
-    ? [`origin/${process.env.BASE_REF}`]
-    : ["main", ...(process.env.BASE_REF ? [`origin/${process.env.BASE_REF}`] : [])];
+      ? [`origin/${process.env.BASE_REF}`]
+      : [
+          "main",
+          ...(process.env.BASE_REF ? [`origin/${process.env.BASE_REF}`] : []),
+        ];
   const snapshot = await captureDotSnapshot(
     {
       prompt: "",
@@ -215,10 +228,17 @@ process.env.SANDCASTLE_DOT_STAGE = JSON.stringify({
   script,
 });
 const code = await new Promise<number>((done, fail) => {
-  const child = spawn(process.execPath, [join(toolRoot, "node_modules/tsx/dist/cli.mjs"), resolve(toolRoot, script!)], {
-    stdio: "inherit",
-    env: process.env,
-  });
+  const child = spawn(
+    process.execPath,
+    [
+      join(toolRoot, "node_modules/tsx/dist/cli.mjs"),
+      resolve(toolRoot, script!),
+    ],
+    {
+      stdio: "inherit",
+      env: process.env,
+    },
+  );
   child.on("error", fail);
   child.on("close", (code) => done(code ?? 1));
 });
