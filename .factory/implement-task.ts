@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { readReviewStandards } from "../.sandcastle/review-standards";
 /**
  * Factory implementer entry point.
  *
@@ -56,6 +57,9 @@ const result = await sandbox.run({
   agent: sandcastle.dot(),
   promptFile: "./.sandcastle/implement-prompt.md",
   promptArgs: {
+    SANDCASTLE_CODING_STANDARDS: readReviewStandards({
+      targetDirectory: repoPath,
+    }),
     ISSUE_NUMBER: String(issueNumber),
     ISSUE_TITLE: taskDescription,
     BRANCH: branch,
@@ -68,6 +72,9 @@ if (result.commits.length > 0) {
     agent: sandcastle.dot(),
     promptFile: "./.sandcastle/review-prompt.md",
     promptArgs: {
+      SANDCASTLE_CODING_STANDARDS: readReviewStandards({
+        targetDirectory: repoPath,
+      }),
       ISSUE_NUMBER: String(issueNumber),
       ISSUE_TITLE: taskDescription,
       BRANCH: branch,
