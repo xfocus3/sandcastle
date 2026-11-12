@@ -77,6 +77,8 @@ it("delivers current tool standards in the actual review stage from an external 
   expect(rendered).toContain("Use the mapped dirty-check contract");
   expect(rendered).toContain("both optimistic and pessimistic callers");
   expect(rendered).toContain("Divergent histories require a separate");
+  expect(rendered).toContain("Respect target-branch formatting rules");
+  expect(rendered).toContain("Prove publication matches verification");
   expect(rendered).not.toContain("{{SANDCASTLE_CODING_STANDARDS}}");
   expect(rendered).not.toContain(target);
 
