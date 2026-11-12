@@ -94,7 +94,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 9092b5144daab036b82097656cf93fd47019172f
+      tool_ref: 9aa50e6dcc37ee5a1a34b67501c1351a3c588ae2
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -109,7 +109,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 2b8b0783c98a8d4c2fd2a9af7be96b1b4ccece26
+      tool_ref: dd7fd8c0c23601ed8dfed457e8040e694ba3e7d5
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
