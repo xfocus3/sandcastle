@@ -80,6 +80,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
           agent: sandcastle.dot(),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
+            SANDCASTLE_CODING_STANDARDS: readReviewStandards(),
             ISSUE_NUMBER: String(issue.number),
             ISSUE_TITLE: issue.title,
             BRANCH: issue.branch,

@@ -62,8 +62,9 @@ Before accepting evidence, inspect the XML test reports: required regression tes
 
 ### Updating review standards
 
-Review stages embed `.sandcastle/CODING_STANDARDS.md` from the pinned Sandcastle
-checkout in the prompt. They do not rely on that file existing in the target
+Implementation and review stages embed selected `.sandcastle/standards/` profiles
+from the pinned Sandcastle checkout. `.sandcastle/CODING_STANDARDS.md` is their
+human-readable index. They do not rely on those files existing in the target
 repository. Keep target-specific instructions and apply the embedded lessons
 only where their contracts and risks match.
 
@@ -81,3 +82,9 @@ The automatic `update-branch` stage only performs fast-forward updates or an alr
 Before a separate authorized update, read the target repository's current contribution instructions, select its permitted integration method, and preserve its commit-message and attribution requirements. Re-adding the label without resolving divergence will not unblock it. Hibernate requires rebasing instead of merge commits; other projects may have different policies.
 
 After integrating upstream changes, audit new callers and run the relevant checks on the resulting source revision. Use direct database assertions before a flush when immediate persistence is the contract. Report earlier-head evidence as historical, not validation of the rebased head. Updating the pinned review standards and the pinned branch-update tool are separate rollout steps; neither starts or resumes an existing agent task.
+
+### Target-specific standards profiles
+
+Issue implementation, PR feedback implementation, and review embed standards selected by the target `GH_REPO`, with optional explicit `SANDCASTLE_UPSTREAM_REPOSITORY` taking precedence for forks. The loader reads only pinned tool profiles, never replacement text from the target working directory. Hibernate ORM, `xfocus3/hibernate-orm`, and `xfocus3/hibernate-work` receive shared + Java + Hibernate; Sandcastle receives shared + Sandcastle TypeScript. Unknown projects receive shared guidance, plus Java when their target build manifests indicate Maven or a Gradle build with Java sources. A branch name or HHH issue key alone never selects Hibernate.
+
+The index is `.sandcastle/CODING_STANDARDS.md`; profile text lives under `.sandcastle/standards/`. Selection happens for each implementation/review invocation and the selected profile names are included in its prompt. Existing runs retain their pinned version. Publish and pin a new tool revision to deliver profile changes; do not replay old checkpoints with changed standards.

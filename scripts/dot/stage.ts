@@ -38,6 +38,7 @@ const controllerPaths = [
   ".sandcastle/agent-workflows",
   ".sandcastle/review-standards.ts",
   ".sandcastle/CODING_STANDARDS.md",
+  ".sandcastle/standards",
   ".github/workflows",
 ];
 const toolRoot = resolve(import.meta.dirname, "../..");

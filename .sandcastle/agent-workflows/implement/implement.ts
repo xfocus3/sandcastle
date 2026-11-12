@@ -1,3 +1,4 @@
+import { readReviewStandards } from "../../review-standards";
 import * as path from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
@@ -9,8 +10,11 @@ const BRANCH = required("BRANCH");
 
 try {
   const issueContext = gh([
-    "issue", "view", ISSUE_NUMBER,
-    "--json", "number,title,body,comments",
+    "issue",
+    "view",
+    ISSUE_NUMBER,
+    "--json",
+    "number,title,body,comments",
   ]);
 
   const result = await sandcastle.run({
@@ -20,6 +24,7 @@ try {
     logging: { type: "stdout" },
     promptFile: path.join(import.meta.dirname, "prompt.md"),
     promptArgs: {
+      SANDCASTLE_CODING_STANDARDS: readReviewStandards(),
       ISSUE_NUMBER,
       ISSUE_TITLE,
       BRANCH,
