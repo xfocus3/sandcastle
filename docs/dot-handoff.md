@@ -53,6 +53,25 @@ timeout. A pending request, timeout, cancellation or blocked response is not
 completion. The coordinator must poll while active; this installs no always-on
 callback into dot.
 
+## Download verification
+
+For Codex and dot coordinators, a browser download-event timeout leaves file
+delivery unconfirmed. It does not establish a failed transfer. Before retrying
+or cancelling a runner solely because the listener timed out, inspect the
+normal browser outcome and any authorized exact expected download path. Do not
+repeat downloads when a valid copy is already available. Broader filesystem
+searches still require the applicable authorization; do not bypass denied
+routes or change browser security settings to obtain a file.
+
+Check ZIP integrity and compare the saved file's SHA-256 with GitHub's displayed
+artifact digest when available. Verify the contained request ID, repository,
+run/attempt, input revision and request hash before using it. A verified saved
+artifact establishes successful delivery even if the browser event was missed.
+Report a missing event separately from the observed file result. File delivery
+alone does not establish that the request is unexpired, its runner is active or
+a response is authorized. Inspect the current run and follow the existing
+recovery boundary before continuing.
+
 ## Source reconstruction and limits
 
 Run `node scripts/dot-restore.mjs request.json disposable-clone` only in a clean,
