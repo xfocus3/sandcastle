@@ -58,10 +58,10 @@ jobs:
       fail-fast: false
       matrix:
         issue: ${{ fromJSON(needs.queue.outputs.issues) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-target.yml@ff0b4aba38a1704fbd8edde7b2b14b42dde86549
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-target.yml@ea49ce07c6e46b192303eb806f3dc6b0bd2617ce
     with:
       issue_number: ${{ matrix.issue.number }}
       issue_title: ${{ matrix.issue.title }}
       base_sha: ${{ needs.sync.outputs.sha }}
       base_ref: upstream-main
-      tool_ref: ff0b4aba38a1704fbd8edde7b2b14b42dde86549
+      tool_ref: ea49ce07c6e46b192303eb806f3dc6b0bd2617ce

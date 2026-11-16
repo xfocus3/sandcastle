@@ -86,7 +86,7 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@ff0b4aba38a1704fbd8edde7b2b14b42dde86549
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@ea49ce07c6e46b192303eb806f3dc6b0bd2617ce
     with:
       verification_workflows: ${{ inputs.verification_workflows }}
       review_exception: ${{ toJSON(matrix.pr.reviewException) }}
@@ -94,7 +94,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: ff0b4aba38a1704fbd8edde7b2b14b42dde86549
+      tool_ref: ea49ce07c6e46b192303eb806f3dc6b0bd2617ce
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -103,13 +103,13 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@ff0b4aba38a1704fbd8edde7b2b14b42dde86549
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@ea49ce07c6e46b192303eb806f3dc6b0bd2617ce
     with:
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: ff0b4aba38a1704fbd8edde7b2b14b42dde86549
+      tool_ref: ea49ce07c6e46b192303eb806f3dc6b0bd2617ce
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
