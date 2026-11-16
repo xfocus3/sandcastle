@@ -16,10 +16,10 @@ on:
         required: true
       verification_workflows:
         type: string
-        default: '[]'
+        default: "[]"
       review_exception:
         type: string
-        default: 'null'
+        default: "null"
       tool_ref:
         type: string
         required: true
@@ -38,6 +38,7 @@ jobs:
       pull-requests: write
 
     env:
+      SANDCASTLE_EXPECTED_TOOL_REF: ${{ inputs.tool_ref }}
       REVIEW_EXCEPTION: ${{ inputs.review_exception }}
       VERIFICATION_WORKFLOWS: ${{ inputs.verification_workflows }}
       BASE_REF: ${{ inputs.base_ref }}

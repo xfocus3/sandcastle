@@ -62,7 +62,7 @@ Before accepting evidence, inspect the XML test reports: required regression tes
 
 ### Updating review standards
 
-Implementation and review stages embed selected `.sandcastle/standards/` profiles
+Explore, implementation and review stages embed selected `.sandcastle/standards/` profiles
 from the pinned Sandcastle checkout. `.sandcastle/CODING_STANDARDS.md` is their
 human-readable index. They do not rely on those files existing in the target
 repository. Keep target-specific instructions and apply the embedded lessons
@@ -85,6 +85,10 @@ After integrating upstream changes, audit new callers and run the relevant check
 
 ### Target-specific standards profiles
 
-Issue implementation, PR feedback implementation, and review embed standards selected by the target `GH_REPO`, with optional explicit `SANDCASTLE_UPSTREAM_REPOSITORY` taking precedence for forks. The loader reads only pinned tool profiles, never replacement text from the target working directory. Hibernate ORM, `xfocus3/hibernate-orm`, and `xfocus3/hibernate-work` receive shared + Java + Hibernate; Sandcastle receives shared + Sandcastle TypeScript. Unknown projects receive shared guidance, plus Java when their target build manifests indicate Maven or a Gradle build with Java sources. A branch name or HHH issue key alone never selects Hibernate.
+Explore, issue implementation, PR feedback implementation, and review embed standards selected by the target `GH_REPO`, with optional explicit `SANDCASTLE_UPSTREAM_REPOSITORY` taking precedence for forks. The loader reads only pinned tool profiles, never replacement text from the target working directory. Hibernate ORM, `xfocus3/hibernate-orm`, and `xfocus3/hibernate-work` receive shared + Java + Hibernate; Sandcastle receives shared + Sandcastle TypeScript. Unknown projects receive shared guidance, plus Java when their target build manifests indicate Maven or a Gradle build with Java sources. A branch name or HHH issue key alone never selects Hibernate.
 
 The index is `.sandcastle/CODING_STANDARDS.md`; profile text lives under `.sandcastle/standards/`. Selection happens for each implementation/review invocation and the selected profile names are included in its prompt. Existing runs retain their pinned version. Publish and pin a new tool revision to deliver profile changes; do not replay old checkpoints with changed standards.
+
+### Standards startup provenance
+
+Target wrappers pass `SANDCASTLE_EXPECTED_TOOL_REF` from the same immutable `tool_ref` used for checkout. Before agent invocation, the loader verifies actual HEAD and rejects modified tracked standards/stage files. It logs and embeds the tool revision, selected profiles and a SHA-256 of their exact text. Recovery retains this expected revision and explicit upstream identity. Local invocations without an expected revision still report the actual checkout and text digest; they are not proof of a clean pinned workflow run. See the [feedback coverage and consumer ledger](hibernate-feedback-2026-11-16.md).

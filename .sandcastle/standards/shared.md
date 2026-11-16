@@ -72,6 +72,7 @@ Avoid shallow modules: large interface with many methods that just pass through 
 - When a defect comes from a rule repeated in sibling code paths, inspect those paths before declaring the fix complete. Correct the same root cause consistently and reuse the smallest appropriate helper instead of copying the patch. Preserve each caller's contextual behavior and keep genuinely different contracts separate.
 - Cover every affected entry point through observable behavior, with controls for behavior that must remain unchanged. Follow the existing RED/GREEN cycle for each regression, then refactor and rerun the focused tests; a shared helper alone does not prove that all callers are correct.
 - Repeat the caller audit after rebasing: upstream may add entry points without producing a textual conflict. Recheck timing, cleanup, and acquisition order on the combined revision rather than assuming an older test result covers the new call graph.
+- Re-evaluate the remaining change against the new parent after a rebase. Run the regressions against that parent and the proposed head; upstream may already fix part of the original report. Keep useful cases as controls, but describe the behavior still introduced by the final patch. Distinguish retained per-entry allocation from per-operation cost and support performance claims with measurements of the claimed quantity. [Hibernate #13614 review](https://github.com/hibernate/hibernate-orm/pull/13614#issuecomment-6822034339).
 
 ## Target-branch formatting and publication evidence
 

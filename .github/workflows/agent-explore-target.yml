@@ -29,6 +29,9 @@ jobs:
     outputs:
       count: ${{ steps.batch.outputs.count }}
 
+    env:
+      SANDCASTLE_EXPECTED_TOOL_REF: ${{ inputs.tool_ref }}
+
     defaults:
       run:
         working-directory: sandcastle-tool

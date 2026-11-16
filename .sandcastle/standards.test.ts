@@ -116,7 +116,7 @@ it("checks the target's build signals, not the tool checkout", () => {
   }
 });
 
-for (const stage of ["implement", "implement-pr", "review"]) {
+for (const stage of ["explore", "implement", "implement-pr", "review"]) {
   it(`renders only Hibernate-selected guidance for the ${stage} stage`, async () => {
     const root = new URL(`./agent-workflows/${stage}/`, import.meta.url);
     const source = readFileSync(new URL(`${stage}.ts`, root), "utf8");
@@ -168,4 +168,27 @@ it("uses workflow GH_REPO and explicit upstream environment for each invocation"
   } finally {
     vi.unstubAllEnvs();
   }
+});
+
+// The external target wrappers must carry the same immutable identity used at checkout.
+it("passes expected tool identity to all standards-consuming target stages", () => {
+  for (const stage of ["explore", "implement", "implement-pr", "review"]) {
+    const wrapper = readFileSync(
+      new URL(
+        `../.github/workflows/agent-${stage}-target.yml`,
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(wrapper).toContain(
+      "SANDCASTLE_EXPECTED_TOOL_REF: ${{ inputs.tool_ref }}",
+    );
+    expect(wrapper).toContain("ref: ${{ inputs.tool_ref }}");
+  }
+  const recovery = readFileSync(
+    new URL("../scripts/dot/stage.ts", import.meta.url),
+    "utf8",
+  );
+  expect(recovery).toContain('"SANDCASTLE_EXPECTED_TOOL_REF"');
+  expect(recovery).toContain('"SANDCASTLE_UPSTREAM_REPOSITORY"');
 });
