@@ -30,8 +30,18 @@ Publish and verify the tool commit first. In a later queue commit, pin the four 
 
 The active issue pipeline uses [agent-implement-target.yml at 5b1ec8b](https://github.com/xfocus3/sandcastle/blob/5b1ec8bb09169218c49e1b57bb86e4a6f78700a7/.github/workflows/agent-implement-target.yml). Its **Open draft PR** shell step constructs the title `Fix #<number>: <issue title>` and a fixed body containing `Closes #<number>` and “Implemented by the Sandcastle agent workflow.” It passes that file to `gh pr create --draft`.
 
-The [implementation agent prompt](https://github.com/xfocus3/sandcastle/blob/dd7fd8c0c23601ed8dfed457e8040e694ba3e7d5/.sandcastle/agent-workflows/implement/prompt.md) explicitly prohibits creating or editing PRs. The inspected creation path does not invoke a PR-writing skill and does not ask an agent to author the PR description. Presence of skills elsewhere, or standards in the implementation prompt, does not change that fixed-template behavior. This task audits that behavior without changing PR generation or posting upstream text.
+The [implementation agent prompt](https://github.com/xfocus3/sandcastle/blob/dd7fd8c0c23601ed8dfed457e8040e694ba3e7d5/.sandcastle/agent-workflows/implement/prompt.md) explicitly prohibits creating or editing PRs. The inspected creation path does not invoke a PR-writing skill and does not ask an agent to author the PR description. Presence of skills elsewhere, or standards in the implementation prompt, does not change that fixed-template behavior. The internal work-PR template remains unchanged. Official Hibernate publication has a separate preparation requirement described below; no upstream PR text is posted by this task.
 
 ## Validation limits
 
 Focused standards tests exercise routing, exact provenance, immutable/mismatched revisions, modified tracked profiles, hostile target-local copies and prompt substitution for all four stages. They do not execute a model, GitHub mutations, Hibernate tests, a database matrix or real candidate stages. Public-source author test counts and quality gates remain historical evidence tied to their stated revisions.
+
+## Official publication skill loading
+
+For every official Hibernate PR description preparation or revision, load the publication host's selected `pr` skill afresh. The local entry point is:
+
+```sh
+npx tsx scripts/prepare-official-pr.ts --config "$SANDCASTLE_PUBLICATION_CONFIG" --template-file "$UPSTREAM_PR_TEMPLATE"
+```
+
+The host-only JSON configuration supplies `prSkillFile`; alternatively supply `--skill-file` or `SANDCASTLE_PR_SKILL_FILE`. Do not commit private host paths. The helper reads the current skill file and selected upstream template on each invocation, includes their exact contents in preparation guidance, and reports both SHA-256 values without printing source paths. Missing inputs fail; the work-PR template is never used as a fallback. The caller reads and follows the guidance before drafting Summary, Evidence and Merge Danger, while retaining Jira/license/checklist requirements and evidence limits. The helper neither invokes a model nor publishes anything; browser publication remains separate and authorized. Tests of loading or host configuration are not proof that a model authored or submitted a compliant official description.

@@ -36,6 +36,11 @@ const fixture = () => {
       "UNTRUSTED TARGET COPY",
     );
   }
+  mkdirSync(join(tool, "scripts"));
+  copyFileSync(
+    new URL("../scripts/prepare-official-pr.ts", import.meta.url),
+    join(tool, "scripts/prepare-official-pr.ts"),
+  );
   copyFileSync(
     new URL("./review-standards.ts", import.meta.url),
     join(tool, ".sandcastle/review-standards.ts"),
@@ -127,6 +132,15 @@ it("rejects modified tracked profile text even when the checkout revision matche
   writeFileSync(
     join(tool, ".sandcastle/standards/hibernate.md"),
     "MODIFIED TRUSTED PROFILE",
+  );
+  expect(() => run()).toThrow(/modified tracked standards or stage files/);
+});
+
+it("rejects a modified tracked official-publication entry point", () => {
+  const { tool, run } = fixture();
+  writeFileSync(
+    join(tool, "scripts/prepare-official-pr.ts"),
+    "modified publication preparation",
   );
   expect(() => run()).toThrow(/modified tracked standards or stage files/);
 });

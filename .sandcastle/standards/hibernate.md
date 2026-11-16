@@ -90,3 +90,7 @@ Example: [Hibernate HHH-20328 review](https://github.com/hibernate/hibernate-orm
 ## Rebase caller-audit example
 
 For example, the [November 11 review of #13881](https://github.com/hibernate/hibernate-orm/pull/13881#pullrequestreview-5856580048) identifies a new extended-scope direct-locking caller whose managed version advances before the database update. This is a reviewer-posted regression finding, not a verified fix.
+
+## Official Hibernate PR descriptions
+
+Every time an official Hibernate PR description is prepared or revised for publication, load and follow the user's selected `pr` skill fresh on the publication host. Use `scripts/prepare-official-pr.ts` with the current upstream template and the host's configured skill source; missing skill/template inputs stop preparation instead of falling back to a generic work-PR body. Follow its brief domain-language Summary with the smallest useful visual, Evidence with concrete Before/After, and Merge Danger with Door and Blast Radius. Preserve the required upstream Jira, license/relicensing and task-checklist text, and retain exact-revision evidence limits. Read the current target contribution instructions and use the authorized browser publication route. The internal issue-workflow PR template is a separate creation path and does not fulfill this official-publication requirement.
