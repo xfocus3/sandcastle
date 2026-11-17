@@ -32,6 +32,9 @@ jobs:
     outputs:
       count: ${{ steps.batch.outputs.count }}
 
+    env:
+      GH_REPO: ${{ github.repository }}
+
     steps:
       # Never read issue titles or bodies into shell or `${{ }}` — they are
       # untrusted. They go to a JSON file and only the TS scripts read them.

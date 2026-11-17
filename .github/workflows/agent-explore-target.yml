@@ -30,6 +30,8 @@ jobs:
       count: ${{ steps.batch.outputs.count }}
 
     env:
+      GH_REPO: ${{ github.repository }}
+      SANDCASTLE_UPSTREAM_REPOSITORY: ${{ inputs.upstream_repository || github.repository }}
       SANDCASTLE_EXPECTED_TOOL_REF: ${{ inputs.tool_ref }}
 
     defaults:

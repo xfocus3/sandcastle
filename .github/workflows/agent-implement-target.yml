@@ -3,6 +3,9 @@ name: Agent Implement Target
 on:
   workflow_call:
     inputs:
+      upstream_repository:
+        type: string
+        default: ""
       issue_number:
         type: number
         required: true
@@ -32,6 +35,7 @@ jobs:
       pull-requests: write
 
     env:
+      SANDCASTLE_UPSTREAM_REPOSITORY: ${{ inputs.upstream_repository || github.repository }}
       SANDCASTLE_EXPECTED_TOOL_REF: ${{ inputs.tool_ref }}
       ISSUE_NUMBER: ${{ inputs.issue_number }}
       ISSUE_TITLE: ${{ inputs.issue_title }}
