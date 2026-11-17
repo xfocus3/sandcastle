@@ -89,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@7ce687487802788866b8ecdadac41b0d4e41dcc2
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@5455b93cf72b9fde2fb87be4e1fca5149595aca3
     with:
       upstream_repository: ${{ inputs.upstream_repository }}
       verification_workflows: ${{ inputs.verification_workflows }}
@@ -98,7 +98,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 7ce687487802788866b8ecdadac41b0d4e41dcc2
+      tool_ref: 5455b93cf72b9fde2fb87be4e1fca5149595aca3
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
@@ -107,14 +107,14 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@7ce687487802788866b8ecdadac41b0d4e41dcc2
+    uses: xfocus3/sandcastle/.github/workflows/agent-implement-pr-target.yml@5455b93cf72b9fde2fb87be4e1fca5149595aca3
     with:
       upstream_repository: ${{ inputs.upstream_repository }}
       pr_number: ${{ matrix.pr.number }}
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: 7ce687487802788866b8ecdadac41b0d4e41dcc2
+      tool_ref: 5455b93cf72b9fde2fb87be4e1fca5149595aca3
   update-branch:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'update-branch'
