@@ -240,6 +240,32 @@ for (const stage of ["explore", "implement", "implement-pr", "review"]) {
   );
 }
 
+it.each([
+  ["agent-implement-queue", "implement"],
+  ["agent-pr-queue", "implement-pr"],
+  ["agent-pr-queue", "review"],
+])("carries upstream identity through %s to %s", async (queue, stage) => {
+  const definition = workflow(queue!);
+  expect(definition.on.workflow_call!.inputs.upstream_repository).toBeDefined();
+  const job = definition.jobs[stage!]!;
+  expect(job.uses).toMatch(
+    new RegExp(`/agent-${stage}-target\\.yml@[0-9a-f]{40}$`),
+  );
+  expect(job.with!.tool_ref).toBe(job.uses!.split("@").at(-1));
+  const upstream = resolve(job.with!.upstream_repository!, {
+    "inputs.upstream_repository": "hibernate/hibernate-orm",
+  });
+  const env = await agentEnvironment(
+    workflow(`agent-${stage}-target`),
+    stage!,
+    "someone/fork",
+    upstream,
+  );
+  expect(standards(env)).toContain(
+    "Selected standards profiles: shared, java, hibernate.",
+  );
+});
+
 it("delivers workflow-selected Hibernate standards to the actual Explore prompt", async () => {
   const env = await agentEnvironment(
     workflow("agent-explore-target"),
