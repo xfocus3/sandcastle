@@ -37,10 +37,16 @@ const fixture = () => {
     );
   }
   mkdirSync(join(tool, "scripts"));
-  copyFileSync(
-    new URL("../scripts/prepare-official-pr.ts", import.meta.url),
-    join(tool, "scripts/prepare-official-pr.ts"),
-  );
+  for (const name of [
+    "prepare-official-pr",
+    "prepare-final-pr",
+    "pr-guidance",
+  ]) {
+    copyFileSync(
+      new URL(`../scripts/${name}.ts`, import.meta.url),
+      join(tool, `scripts/${name}.ts`),
+    );
+  }
   copyFileSync(
     new URL("./review-standards.ts", import.meta.url),
     join(tool, ".sandcastle/review-standards.ts"),
@@ -144,3 +150,15 @@ it("rejects a modified tracked official-publication entry point", () => {
   );
   expect(() => run()).toThrow(/modified tracked standards or stage files/);
 });
+
+it.each(["prepare-final-pr", "pr-guidance"])(
+  "rejects a modified tracked %s entry point",
+  (name) => {
+    const { tool, run } = fixture();
+    writeFileSync(
+      join(tool, `scripts/${name}.ts`),
+      "modified final PR preparation",
+    );
+    expect(() => run()).toThrow(/modified tracked standards or stage files/);
+  },
+);

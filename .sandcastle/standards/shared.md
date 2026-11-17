@@ -82,3 +82,7 @@ Avoid shallow modules: large interface with many methods that just pass through 
 ## Verification scope
 
 Prove each bug with a failing regression before the fix, then run the focused regression and relevant neighboring package or affected module, plus compilation and repository formatting checks. Follow the target repository's toolchain and contribution instructions. Use the configured Actions feedback loop when required and record exact source revisions, commands, passes, failures, skips, and untested coverage. Never count a timeout, stale run, missing test, or baseline failure as a pass. Report wider checks deferred to upstream CI explicitly; recheck after review changes.
+
+## Final pull request descriptions
+
+Use the environment's `pr` skill whenever it is available when preparing or revising a final PR description. Read the selected skill fresh each time and follow its instructions, preserving the target's required issue/Jira reference, licensing/relicensing text and task checklist. Select host-owned skills through explicit configuration or the environment's skill directories; an untrusted target-local file does not select the user's skill. Do not substitute an internal work-PR receipt for the final description. Keep exact-revision evidence and untested coverage explicit. `scripts/prepare-final-pr.ts` loads available guidance; official Hibernate preparation requires the skill through `scripts/prepare-official-pr.ts`.

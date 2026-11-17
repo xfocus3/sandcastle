@@ -92,6 +92,8 @@ const toolRevision = (expected: string | undefined): string => {
           ".sandcastle",
           "scripts/dot/stage.ts",
           "scripts/prepare-official-pr.ts",
+          "scripts/prepare-final-pr.ts",
+          "scripts/pr-guidance.ts",
         ],
         {
           stdio: ["ignore", "pipe", "pipe"],

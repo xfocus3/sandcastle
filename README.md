@@ -1390,6 +1390,16 @@ hooks: {
 
 The Java `agent:update-branch` stage handles already-up-to-date and fast-forward cases only. It stops on divergent histories instead of choosing a merge or rebase policy for the target project. Follow that project's contribution rules through a separately authorized update, then verify the resulting revision. See [focused Java verification](docs/java-verification.md#branch-updates-before-verification).
 
+## Final pull request descriptions
+
+When a `pr` skill is available in the environment, final PR preparation reads it fresh and follows it while retaining the target repository's required issue reference, license text and checklist. Local preparation prints instructions; it does not author or publish a PR.
+
+```bash
+npx tsx scripts/prepare-final-pr.ts --template-file upstream-pr-template.md
+```
+
+Selection order is `--skill-file`, `SANDCASTLE_PR_SKILL_FILE`, the `prSkillFile` in `--config` (or `SANDCASTLE_PUBLICATION_CONFIG`), then `$CODEX_HOME/skills/pr/SKILL.md`, `~/.agents/skills/pr/SKILL.md` and `~/.codex/skills/pr/SKILL.md`. Explicit missing or invalid sources fail instead of silently falling back; target-local skill files are never used for automatic discovery. If no skill is installed, generic preparation retains the upstream template and reports that absence. Official Hibernate preparation uses `scripts/prepare-official-pr.ts` and always requires the skill and pinned standards.
+
 ## Development
 
 ```bash

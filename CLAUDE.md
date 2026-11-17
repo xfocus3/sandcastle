@@ -6,6 +6,10 @@ For user-facing changes, add a changeset to `.changeset`. Check all changesets t
 
 When changing public-facing behavior, check `README.md` to see if the documentation needs updating.
 
+## Final pull request descriptions
+
+When preparing or revising a final PR description, use the environment's `pr` skill whenever it is available and read it fresh for that preparation. Explicit selection takes precedence over automatic discovery. Preserve the target repository's issue/Jira reference, license/relicensing text and checklist, and report only exact-revision evidence. Never use the internal draft work-PR receipt as the final description. See `scripts/prepare-final-pr.ts`; official Hibernate preparation uses the stricter `scripts/prepare-official-pr.ts`.
+
 ## Agent skills
 
 ### Issue tracker
