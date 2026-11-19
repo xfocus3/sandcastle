@@ -94,3 +94,9 @@ For example, the [November 11 review of #13881](https://github.com/hibernate/hib
 ## Official Hibernate PR descriptions
 
 Every time an official Hibernate PR description is prepared or revised for publication, load and follow the user's selected `pr` skill fresh on the publication host. Use `scripts/prepare-official-pr.ts` with the current upstream template and the host's configured skill source; missing skill/template inputs stop preparation instead of falling back to a generic work-PR body. Follow its brief domain-language Summary with the smallest useful visual, Evidence with concrete Before/After, and Merge Danger with Door and Blast Radius. Preserve the required upstream Jira, license/relicensing and task-checklist text, and retain exact-revision evidence limits. Read the current target contribution instructions and use the authorized browser publication route. The internal issue-workflow PR template is a separate creation path and does not fulfill this official-publication requirement.
+
+## SQL AST translator parenthesis constants
+
+When adding or changing parenthesis rendering in Hibernate SQL AST translators where the existing constants are in scope, use `appendSql( OPEN_PARENTHESIS )` and `appendSql( CLOSE_PARENTHESIS )` rather than `appendSql( '(' )` and `appendSql( ')' )`. Follow nearby translator conventions and preserve the rendered SQL. This is a scoped consistency rule, not a blanket ban on character literals or a reason for unrelated formatting changes.
+
+Source: Gavin King's [opening-parenthesis suggestion](https://github.com/hibernate/hibernate-orm/pull/13999#discussion_r4629822567) and [closing-parenthesis suggestion](https://github.com/hibernate/hibernate-orm/pull/13999#discussion_r4629825998) on HHH-21130, described as tiny changes for consistency. These are explicit maintainer requests, not a claim that the follow-up was merged.
