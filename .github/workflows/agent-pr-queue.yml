@@ -89,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         pr: ${{ fromJSON(needs.queue.outputs.prs) }}
-    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@edb78a39182cc69dcc6ce5e556e42ecdb6f083e6
+    uses: xfocus3/sandcastle/.github/workflows/agent-review-target.yml@49728ed46e65945f557c757168ed8d375406ccf1
     with:
       upstream_repository: ${{ inputs.upstream_repository }}
       verification_workflows: ${{ inputs.verification_workflows }}
@@ -98,7 +98,7 @@ jobs:
       branch: ${{ matrix.pr.headRefName }}
       head_sha: ${{ matrix.pr.headRefOid }}
       base_ref: ${{ matrix.pr.baseRefName }}
-      tool_ref: edb78a39182cc69dcc6ce5e556e42ecdb6f083e6
+      tool_ref: 49728ed46e65945f557c757168ed8d375406ccf1
   implement-pr:
     needs: queue
     if: needs.queue.outputs.count != '0' && inputs.mode == 'implement-pr'
