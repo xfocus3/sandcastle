@@ -100,3 +100,13 @@ Every time an official Hibernate PR description is prepared or revised for publi
 When adding or changing parenthesis rendering in Hibernate SQL AST translators where the existing constants are in scope, use `appendSql( OPEN_PARENTHESIS )` and `appendSql( CLOSE_PARENTHESIS )` rather than `appendSql( '(' )` and `appendSql( ')' )`. Follow nearby translator conventions and preserve the rendered SQL. This is a scoped consistency rule, not a blanket ban on character literals or a reason for unrelated formatting changes.
 
 Source: Gavin King's [opening-parenthesis suggestion](https://github.com/hibernate/hibernate-orm/pull/13999#discussion_r4629822567) and [closing-parenthesis suggestion](https://github.com/hibernate/hibernate-orm/pull/13999#discussion_r4629825998) on HHH-21130, described as tiny changes for consistency. These are explicit maintainer requests, not a claim that the follow-up was merged.
+
+
+## Immediate JDBC effects across shared sessions
+
+- When a fix overrides batching or another session-scoped setting, trace which session owns the shared JDBC coordinator and which setting the executor actually reads. A value set on the calling session is not evidence that the executor sees it. Cover a normal session and a child session sharing its parent’s connection with batching enabled. Check both the managed state and a same-connection JDBC read immediately after the operation returns, before any flush or commit can hide deferred execution. If a fix temporarily changes a setting, restore the owning session’s prior value. [Review of #13881](https://github.com/hibernate/hibernate-orm/pull/13881#pullrequestreview-6003749741)
+
+## Effective XML mappings and declaration history
+
+- Review replacement checks against the effective mapping immediately before it is cleared, not just the XML elements listed directly under `attributes`. When a later mapping makes a basic member transient, cover directly declared basics, natural-ID basics, and implicitly mapped members under field access. Keep valid partial overrides and equivalent complete copies as controls.
+- Test the full declaration chain, not just pairs. An equivalent unnamed complete mapping must not erase the history of an established explicit name if the effective name stays the same. Cover explicit → equivalent unnamed → conflicting explicit and require the same rejection as the direct explicit → conflicting explicit case. [Review of #14002](https://github.com/hibernate/hibernate-orm/pull/14002#pullrequestreview-6003752421)
